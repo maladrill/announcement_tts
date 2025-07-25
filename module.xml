@@ -1,0 +1,64 @@
+<module>
+  <rawname>announcementtts</rawname>
+  <repo>standard</repo>
+  <name>Announcements TTS</name>
+  <version>0.1.0</version>
+  <publisher>SQS Polska</publisher>
+  <license>GPLv3+</license>
+  <licenselink>http://www.gnu.org/licenses/gpl-3.0.txt</licenselink>
+  <changelog>
+    initial release
+  </changelog>
+  <category>Applications</category>
+  <more-info>https://wiki.freepbx.org/display/FPG/Announcements+Module+User+Guide</more-info>
+  <description>
+    Plays back one of the system recordings (optionally allowing the user to skip it)
+    and then goes to another destination, with automatic TTS generation via OpenAI. Add your OpenAI key to /etc/asterisk/openai.key after the installation.
+</description>
+
+  <database>
+    <table name="announcementtts">
+      <field name="announcementtts_id" type="integer" primarykey="true" autoincrement="true"/>
+      <field name="description"     type="string"  length="50"  notnull="false"/>
+      <field name="recording_id"     type="integer" notnull="false"/>
+      <field name="allow_skip"       type="integer" notnull="false"/>
+      <field name="post_dest"        type="string"  length="255" notnull="false"/>
+      <field name="return_ivr"       type="boolean" default="0"/>
+      <field name="noanswer"         type="boolean" default="0"/>
+      <field name="repeat_msg"       type="string"  length="2"   default=""/>
+      <!-- pola dodane przez install.php: text, language, voice, audio_file -->
+    </table>
+  </database>
+
+  <depends>
+    <version>17.0.1</version>
+    <module>recordings ge 17.0.1</module>
+  </depends>
+
+  <destinations>
+    <!-- nazwa funkcji w functions.inc.php -->
+    <announcementtts>announcementtts_destinations</announcementtts>
+  </destinations>
+
+  <menuitems>
+    <!-- klucz menu: announcementtts -->
+    <announcementtts needsenginedb="yes">Announcements TTS</announcementtts>
+  </menuitems>
+
+  <popovers>
+    <announcementtts>
+      <display>announcementtts</display>
+      <view>form</view>
+    </announcementtts>
+  </popovers>
+
+    <hooks>
+      <dialplan>
+        <config>announcementtts_get_config</config>
+      </dialplan>
+    </hooks>
+
+  <supported>
+    <version>17.0</version>
+  </supported>
+</module>
