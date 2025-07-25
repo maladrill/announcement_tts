@@ -2,12 +2,12 @@
   <rawname>announcementtts</rawname>
   <repo>unsupported</repo>
   <name>Announcements TTS</name>
-  <version>1.0.3</version>
+  <version>1.0.4</version>
   <publisher>SQS Polska</publisher>
   <license>GPLv3+</license>
   <licenselink>http://www.gnu.org/licenses/gpl-3.0.txt</licenselink>
   <changelog>
-    Added popovers and fixed installer
+    Fixed installer
   </changelog>
   <category>Applications</category>
   <more-info>https://github.com/maladrill/announcement_tts</more-info>
