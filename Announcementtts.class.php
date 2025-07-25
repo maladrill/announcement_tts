@@ -184,26 +184,42 @@ public function addAnnouncementtts($description, $recording_id, $allow_skip,
     return $id;
 }
 
-    public function editAnnouncementtts($announcementtts_id, $description, $recording_id,
-                                        $allow_skip, $post_dest, $return_ivr, $noanswer, $repeat_msg) {
-        // **1. Sanitizacja recording_id**
+    /**
+     * Edit an announcement and regenerate audio only if TTS fields changed.
+     */
+    public function editAnnouncementtts(
+        $announcementtts_id,
+        $description,
+        $recording_id,
+        $allow_skip,
+        $post_dest,
+        $return_ivr,
+        $noanswer,
+        $repeat_msg
+    ) {
+        // 1) sanitize recording_id
         if ($recording_id === '' || $recording_id === null) {
             $recording_id = null;
         } else {
             $recording_id = intval($recording_id);
         }
-        // pozostałe pola
         $allow_skip = $allow_skip ? 1 : 0;
         $return_ivr = $return_ivr ? 1 : 0;
         $noanswer   = $noanswer   ? 1 : 0;
         $repeat_msg = $repeat_msg ?: '';
 
-        // **2. Pobranie TTS-owych wartości z formularza**
+        // 2) fetch old TTS values for comparison
+        $old = $this->getAnnouncementttsByID($announcementtts_id);
+        $oldText  = $old['text']     ?? '';
+        $oldLang  = $old['language'] ?? '';
+        $oldVoice = $old['voice']    ?? '';
+
+        // 3) grab new TTS values from form
         $text     = $_REQUEST['text']     ?? '';
         $language = $_REQUEST['language'] ?? 'en';
         $voice    = $_REQUEST['voice']    ?? 'sage';
 
-        // **3. UPDATE wszystkich kolumn**
+        // 4) update every column, including TTS fields
         $sql = "UPDATE announcementtts SET
                     description   = :description,
                     recording_id  = :recording_id,
@@ -230,8 +246,29 @@ public function addAnnouncementtts($description, $recording_id, $allow_skip,
             ':id'            => $announcementtts_id,
         ];
         $stmt = $this->db->prepare($sql);
-        return $stmt->execute($params);
-    }	public function doConfigPageInit($page) {
+        $stmt->execute($params);
+
+        // 5) if any TTS field changed, regenerate the audio
+        if ($text !== $oldText || $language !== $oldLang || $voice !== $oldVoice) {
+            try {
+                $wav       = generate_tts($announcementtts_id, $text, $language, $voice);
+                $fullPath  = "/var/lib/asterisk/sounds/custom/{$wav}";
+                $upd = $this->db->prepare(
+                    "UPDATE announcementtts SET audio_file = :audio_file WHERE announcementtts_id = :id"
+                );
+                $upd->execute([
+                    ':audio_file' => $fullPath,
+                    ':id'         => $announcementtts_id,
+                ]);
+            } catch (\Exception $e) {
+                // log and continue if TTS fails
+                error_log("AnnouncementTTS regen error for ID {$announcementtts_id}: " . $e->getMessage());
+            }
+        }
+
+        return true;    }	
+
+	public function doConfigPageInit($page) {
 		$request = $_REQUEST;
 		$action = $request['action'] ?? '';
 		if (isset($request['delete'])){
