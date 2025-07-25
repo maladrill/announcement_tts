@@ -16,13 +16,13 @@ Obtain OpenAI API key from https://platform.openai.com/settings/organization/api
 Log into to your FreePBX shell and create file containing your key in /etc/asterisk/openai.key  
  
 ### For example:
-In shell paste below command (don't forget to add your openA  key:
+In shell paste below command (don't forget to add your openAI  key):
 touch /etc/asterisk/openai.key & echo "-<YOUR_API_KEY_HERE>" > /etc/asterisk/openai.key 
-Then donwload tis module from https://github.com/maladrill/announcement_tts/archive/refs/heads/main.zip and install  it in dmin -> Module Admin -> Upload modules
+Then download this module from https://github.com/maladrill/announcement_tts/archive/refs/heads/main.zip and install it in Admin -> Module Admin -> Upload modules
 
 ### TODO
 Fix the playback of the recordings
-Add config page to in settings to hold OpenAI API key
+Add config page in Settings to hold OpenAI API key
 
 ### Issues
 Please file bug reports at https://github.com/maladrill/announcement_tts/issues
