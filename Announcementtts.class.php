@@ -1,7 +1,7 @@
 <?php
 //	License for all code of this FreePBX module can be found in the license file inside the module directory
-//	Copyright 2015 Sangoma Technologies.
-// vim: set ai ts=4 sw=4 ft=php:
+//	Copyright 2015 Sangoma Technologies and SQS Polska.
+// vim: set ai ts=4 sw=4 ft=php: 
 namespace FreePBX\modules;
 class Announcementtts extends \FreePBX_Helpers implements \BMO {
 

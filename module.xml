@@ -1,21 +1,23 @@
 <module>
   <rawname>announcementtts</rawname>
-  <repo>standard</repo>
+  <repo>unsupported</repo>
   <name>Announcements TTS</name>
-  <version>0.1.0</version>
+  <version>1.0.0</version>
   <publisher>SQS Polska</publisher>
   <license>GPLv3+</license>
   <licenselink>http://www.gnu.org/licenses/gpl-3.0.txt</licenselink>
   <changelog>
-    initial release
+    First release
   </changelog>
   <category>Applications</category>
-  <more-info>https://wiki.freepbx.org/display/FPG/Announcements+Module+User+Guide</more-info>
-  <description>
-    Plays back one of the system recordings (optionally allowing the user to skip it)
-    and then goes to another destination, with automatic TTS generation via OpenAI. Add your OpenAI key to /etc/asterisk/openai.key after the installation.
-</description>
-
+  <more-info>https://github.com/maladrill/announcement_tts</more-info>
+  <description><![CDATA[
+   Plays back one of the system recordings (optionally allowing the user to skip it)
+   and then goes to another destination, with automatic TTS generation via OpenAI.
+   Add your OpenAI key to /etc/asterisk/openai.key after the installation.
+   In shell paste below command (don’t forget to add your openAI key):
+   touch /etc/asterisk/openai.key && echo "<YOUR_API_KEY_HERE>" > /etc/asterisk/openai.key]]>
+  </description>
   <database>
     <table name="announcementtts">
       <field name="announcementtts_id" type="integer" primarykey="true" autoincrement="true"/>

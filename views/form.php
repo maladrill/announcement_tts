@@ -96,7 +96,7 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
   <div class="element-container">
     <div class="row">
       <div class="col-md-3">
-        <label class="control-label" for="text"><?php echo _("Treść zapowiedzi")?></label>
+        <label class="control-label" for="text"><?php echo _("Announcement Text")?></label>
       </div>
       <div class="col-md-9">
         <textarea class="form-control"
@@ -112,7 +112,7 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
   <div class="element-container">
     <div class="row">
       <div class="col-md-3">
-        <label class="control-label" for="language"><?php echo _("Język")?></label>
+        <label class="control-label" for="language"><?php echo _("Language")?></label>
       </div>
       <div class="col-md-9">
         <select class="form-control" id="language" name="language">
@@ -131,7 +131,7 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
   <div class="element-container">
     <div class="row">
       <div class="col-md-3">
-        <label class="control-label" for="voice"><?php echo _("Głos")?></label>
+        <label class="control-label" for="voice"><?php echo _("Voice")?></label>
       </div>
       <div class="col-md-9">
         <select class="form-control" id="voice" name="voice">
@@ -154,7 +154,7 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
   ?>
     <div class="element-container">
       <div class="row">
-        <div class="col-md-3"><?php echo _("Gotowy plik")?></div>
+        <div class="col-md-3"><?php echo _("Audio file")?></div>
         <div class="col-md-9">
           <strong><?php echo htmlspecialchars(basename($row['audio_file']),ENT_QUOTES) ?></strong><br>
           <audio controls
