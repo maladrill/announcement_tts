@@ -72,8 +72,10 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
   <div class="element-container">
     <div class="row">
       <div class="col-md-3">
-        <label class="control-label" for="description"><?php echo _("Description")?></label>
-        <i class="fa fa-question-circle fpbx-help-icon" data-for="description"></i>
+        <label class="control-label" for="description">
+          <?php echo _("Description")?>
+          <i class="fa fa-question-circle fpbx-help-icon" data-for="description"></i>
+        </label>
       </div>
       <div class="col-md-9">
         <input type="text"
@@ -83,20 +85,16 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
                value="<?php echo htmlspecialchars($description,ENT_QUOTES) ?>">
       </div>
     </div>
-    <div class="row">
-      <div class="col-md-12">
-        <span class="help-block fpbx-help-block">
-          <?php echo _("The name of this announcement.")?>
-        </span>
-      </div>
-    </div>
   </div>
 
-  <!-- TTS: Treść zapowiedzi -->
+  <!-- Announcement Text -->
   <div class="element-container">
     <div class="row">
       <div class="col-md-3">
-        <label class="control-label" for="text"><?php echo _("Announcement Text")?></label>
+        <label class="control-label" for="text">
+          <?php echo _("Announcement Text")?>
+          <i class="fa fa-question-circle fpbx-help-icon" data-for="text"></i>
+        </label>
       </div>
       <div class="col-md-9">
         <textarea class="form-control"
@@ -108,11 +106,14 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
     </div>
   </div>
 
-  <!-- TTS: Język -->
+  <!-- Language -->
   <div class="element-container">
     <div class="row">
       <div class="col-md-3">
-        <label class="control-label" for="language"><?php echo _("Language")?></label>
+        <label class="control-label" for="language">
+          <?php echo _("Language")?>
+          <i class="fa fa-question-circle fpbx-help-icon" data-for="language"></i>
+        </label>
       </div>
       <div class="col-md-9">
         <select class="form-control" id="language" name="language">
@@ -127,11 +128,14 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
     </div>
   </div>
 
-  <!-- TTS: Głos -->
+  <!-- Voice -->
   <div class="element-container">
     <div class="row">
       <div class="col-md-3">
-        <label class="control-label" for="voice"><?php echo _("Voice")?></label>
+        <label class="control-label" for="voice">
+          <?php echo _("Voice")?>
+          <i class="fa fa-question-circle fpbx-help-icon" data-for="voice"></i>
+        </label>
       </div>
       <div class="col-md-9">
         <select class="form-control" id="voice" name="voice">
@@ -146,7 +150,7 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
     </div>
   </div>
 
-  <!-- Gotowy plik (audio) -->
+  <!-- Audio File Preview -->
   <?php if (!empty($row['audio_file']) && file_exists($row['audio_file'])):
     $id        = intval($row['announcementtts_id']);
     $base      = htmlspecialchars($_SERVER['PHP_SELF'],ENT_QUOTES);
@@ -160,7 +164,7 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
           <audio controls
                  src="<?php echo htmlspecialchars($audio_url,ENT_QUOTES) ?>"
                  type="audio/wav">
-            <?php echo _("Twoja przeglądarka nie obsługuje odtwarzania audio.")?>
+            <?php echo _("Your browser does not support audio playback.")?>
           </audio>
         </div>
       </div>
@@ -171,7 +175,10 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
   <div class="element-container">
     <div class="row">
       <div class="col-md-3">
-        <label class="control-label" for="repeat_msg"><?php echo _("Repeat")?></label>
+        <label class="control-label" for="repeat_msg">
+          <?php echo _("Repeat")?>
+          <i class="fa fa-question-circle fpbx-help-icon" data-for="repeat_msg"></i>
+        </label>
       </div>
       <div class="col-md-9">
         <select class="form-control" id="repeat_msg" name="repeat_msg">
@@ -185,7 +192,10 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
   <div class="element-container">
     <div class="row">
       <div class="col-md-3">
-        <label class="control-label"><?php echo _("Allow Skip")?></label>
+        <label class="control-label">
+          <?php echo _("Allow Skip")?>
+          <i class="fa fa-question-circle fpbx-help-icon" data-for="allow_skip"></i>
+        </label>
       </div>
       <div class="col-md-9 radioset">
         <input type="radio" name="allow_skip" id="allow_skipyes" value="1" <?php echo $allow_skip?'checked':''?>>
@@ -200,7 +210,10 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
   <div class="element-container">
     <div class="row">
       <div class="col-md-3">
-        <label class="control-label"><?php echo _("Return to IVR")?></label>
+        <label class="control-label">
+          <?php echo _("Return to IVR")?>
+          <i class="fa fa-question-circle fpbx-help-icon" data-for="return_ivr"></i>
+        </label>
       </div>
       <div class="col-md-9 radioset">
         <input type="radio" name="return_ivr" id="return_ivryes" value="1" <?php echo $return_ivr?'checked':''?>>
@@ -211,11 +224,14 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
     </div>
   </div>
 
-  <!-- Don’t Answer Channel -->
+  <!-- Don't Answer Channel -->
   <div class="element-container">
     <div class="row">
       <div class="col-md-3">
-        <label class="control-label"><?php echo _("Don't Answer Channel")?></label>
+        <label class="control-label">
+          <?php echo _("Don't Answer Channel")?>
+          <i class="fa fa-question-circle fpbx-help-icon" data-for="noanswer"></i>
+        </label>
       </div>
       <div class="col-md-9 radioset">
         <input type="radio" name="noanswer" id="noansweryes" value="1" <?php echo $noanswer?'checked':''?>>
@@ -230,14 +246,16 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
   <div class="element-container">
     <div class="row">
       <div class="col-md-3">
-        <label class="control-label"><?php echo _("Destination after Playback")?></label>
+        <label class="control-label">
+          <?php echo _("Destination after Playback")?>
+          <i class="fa fa-question-circle fpbx-help-icon" data-for="post_dest"></i>
+        </label>
       </div>
       <div class="col-md-9">
         <?php echo drawselects($post_dest, 0) ?>
       </div>
     </div>
   </div>
-
 </form>
 
 <script type="text/javascript">

@@ -2,12 +2,12 @@
   <rawname>announcementtts</rawname>
   <repo>unsupported</repo>
   <name>Announcements TTS</name>
-  <version>1.0.0</version>
+  <version>1.0.3</version>
   <publisher>SQS Polska</publisher>
   <license>GPLv3+</license>
   <licenselink>http://www.gnu.org/licenses/gpl-3.0.txt</licenselink>
   <changelog>
-    First release
+    Added popovers and fixed installer
   </changelog>
   <category>Applications</category>
   <more-info>https://github.com/maladrill/announcement_tts</more-info>
@@ -18,20 +18,7 @@
    In shell paste below command (don’t forget to add your openAI key):
    touch /etc/asterisk/openai.key && echo "<YOUR_API_KEY_HERE>" > /etc/asterisk/openai.key]]>
   </description>
-  <database>
-    <table name="announcementtts">
-      <field name="announcementtts_id" type="integer" primarykey="true" autoincrement="true"/>
-      <field name="description"     type="string"  length="50"  notnull="false"/>
-      <field name="recording_id"     type="integer" notnull="false"/>
-      <field name="allow_skip"       type="integer" notnull="false"/>
-      <field name="post_dest"        type="string"  length="255" notnull="false"/>
-      <field name="return_ivr"       type="boolean" default="0"/>
-      <field name="noanswer"         type="boolean" default="0"/>
-      <field name="repeat_msg"       type="string"  length="2"   default=""/>
-      <!-- pola dodane przez install.php: text, language, voice, audio_file -->
-    </table>
-  </database>
-
+  <database/>
   <depends>
     <version>17.0.1</version>
     <module>recordings ge 17.0.1</module>
@@ -47,14 +34,41 @@
     <announcementtts needsenginedb="yes">Announcements TTS</announcementtts>
   </menuitems>
 
-  <popovers>
-    <announcementtts>
-      <display>announcementtts</display>
-      <view>form</view>
-    </announcementtts>
-  </popovers>
-
-    <hooks>
+<popovers>
+  <announcementtts>
+    <display>announcementtts</display>
+    <view>form</view>
+    <texts>
+      <description><![CDATA[
+        You can give this announcement a friendly name for your own reference.
+      ]]></description>
+      <text><![CDATA[
+        Enter the text that you want spoken by the TTS engine.
+      ]]></text>
+      <language><![CDATA[
+        Select the language/accent for the TTS voice (e.g. “en” for English).
+      ]]></language>
+      <voice><![CDATA[
+        Choose which voice model (tone/style) to use for TTS playback.
+      ]]></voice>
+      <repeat_msg><![CDATA[
+        Select a single DTMF digit that callers can press to replay the announcement.
+      ]]></repeat_msg>
+      <allow_skip><![CDATA[
+        If “Yes”, callers may press any key to skip ahead immediately.
+      ]]></allow_skip>
+      <return_ivr><![CDATA[
+        If “Yes”, control returns to the parent IVR after playback instead of your destination.
+      ]]></return_ivr>
+      <noanswer><![CDATA[
+        If “Yes”, the channel isn’t formally answered – you get early‑media playback.
+      ]]></noanswer>
+      <post_dest><![CDATA[
+        Where to send the call once playback completes (or is skipped).
+      ]]></post_dest>
+    </texts>
+  </announcementtts>
+</popovers>    <hooks>
       <dialplan>
         <config>announcementtts_get_config</config>
       </dialplan>
