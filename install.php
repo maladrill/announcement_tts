@@ -17,18 +17,25 @@ $needs = [
 ];
 
 try {
-    // Grab all column names from our table
-    $rows = $db->getAll("SHOW COLUMNS FROM `announcementtts`", [], DB_FETCHMODE_ASSOC);
-    $existing = array_column($rows, 'Field');
+    // 1) Try to fetch the existing columns
+    $rows = $db->getAll("SHOW COLUMNS FROM `announcementtts`", DB_FETCHMODE_ASSOC);
 
-    // For each needed column, ALTER only if it doesn't already exist
+    // 2) If that returned an error (on brand‑new install the table may not exist yet),
+    //    treat it as “no columns found” so all four will be created below.
+    if (!is_array($rows)) {
+        $existing = [];
+    } else {
+        $existing = array_column($rows, 'Field');
+    }
+
+    // 3) For each needed column, ALTER only if it doesn’t exist already
     foreach ($needs as $col => $alterSql) {
-        if (!in_array($col, $existing)) {
+        if (!in_array($col, $existing, true)) {
             $db->query($alterSql);
         }
     }
 
-    // Signal success
+    // 4) Signal success
     return true;
 
 } catch (Exception $e) {
