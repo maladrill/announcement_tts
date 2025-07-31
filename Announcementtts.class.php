@@ -107,11 +107,17 @@ class Announcementtts extends \FreePBX_Helpers implements \BMO {
 	/**
 	 * Module uninstallation handler – drop the main table.
 	 */
-	public function uninstall() {
-		$sql = 'DROP TABLE announcementtts';
-		$stmt = $this->db->prepare($sql);
-		return $stmt->execute();
-	}
+        public function uninstall() {
+            try {
+                $sql = 'DROP TABLE IF EXISTS announcementtts';
+                $stmt = $this->db->prepare($sql); 
+                $stmt->execute();
+                return true;
+            } catch (\PDOException $e) {
+                error_log("[announcementtts] Uninstall error: " . $e->getMessage());
+                return false;
+            }
+        }
 
 	public function backup($backup) {
 		// Unused – see Backup.php
