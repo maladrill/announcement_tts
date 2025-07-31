@@ -160,6 +160,7 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
 <!-- JavaScript array of names for duplicate check -->
 <script>
 <?php
+// Build list of existing descriptions (excluding current record if editing)
 $all = announcementtts_list();
 if (!empty($extdisplay)) {
     $all = array_filter($all, fn($r) => $r['announcementtts_id'] != $extdisplay);
