@@ -25,6 +25,8 @@ $("#announcegrid-side").on('click-row.bs.table',function(e,row,elem){
 	window.location = '?display=announcementtts&view=form&extdisplay='+row['announcementtts_id'];
 });
 
+
+
 function actionformatter(v,r){
   var html = '<a href="?display=announcementtts&view=form&extdisplay='+v+'"><i class="fa fa-edit"></i></a>';
       html += '<a href="?display=announcementtts&action=delete&extdisplay='+v+'" class="delAction"><i class="fa fa-trash"></i></a>';
