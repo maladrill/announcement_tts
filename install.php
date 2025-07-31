@@ -7,44 +7,31 @@ global $db;
 /**
  * install.php
  *
- * 1) Creates announcementtts table (with recording_id) if it doesn’t exist
- * 2) On upgrades only adds any of the missing columns
+ * Tworzy tabelę announcementtts z aktualnym, uproszczonym schematem.
  */
 
-// 1) Create full table schema on fresh installs
+// Stwórz tabelę, jeśli nie istnieje
 $db->query("
   CREATE TABLE IF NOT EXISTS `announcementtts` (
     `announcementtts_id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `description`       VARCHAR(50)  NULL,
-    `recording_id`      INT          NULL,
-    `allow_skip`        TINYINT(1)   NOT NULL DEFAULT 0,
-    `post_dest`         VARCHAR(255) NULL,
-    `return_ivr`        TINYINT(1)   NOT NULL DEFAULT 0,
-    `noanswer`          TINYINT(1)   NOT NULL DEFAULT 0,
-    `repeat_msg`        VARCHAR(2)   NOT NULL DEFAULT '',
-    `text`              TEXT         NULL,
-    `language`          VARCHAR(10)  NOT NULL DEFAULT 'en',
-    `voice`             VARCHAR(20)  NOT NULL DEFAULT 'sage',
-    `audio_file`        VARCHAR(255) NULL
+    `description`        VARCHAR(50)  NULL,
+    `text`               TEXT         NULL,
+    `language`           VARCHAR(10)  NOT NULL DEFAULT 'en',
+    `voice`              VARCHAR(20)  NOT NULL DEFAULT 'sage',
+    `audio_file`         VARCHAR(255) NULL,
+    `post_dest`          VARCHAR(255) NOT NULL DEFAULT ''
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ");
 
-// 2) Now make sure any “delta” columns get added on upgrades only
-$needs = [
-    'recording_id' => "ALTER TABLE `announcementtts` ADD COLUMN `recording_id` INT NULL",
-    'text'         => "ALTER TABLE `announcementtts` ADD COLUMN `text` TEXT NULL",
-    'language'     => "ALTER TABLE `announcementtts` ADD COLUMN `language` VARCHAR(10) NOT NULL DEFAULT 'en'",
-    'voice'        => "ALTER TABLE `announcementtts` ADD COLUMN `voice` VARCHAR(20) NOT NULL DEFAULT 'sage'",
-    'audio_file'   => "ALTER TABLE `announcementtts` ADD COLUMN `audio_file` VARCHAR(255) NULL",
-];
-
+// Usuwanie niepotrzebnych kolumn (jeśli istnieją)
+$drop_columns = ['recording_id', 'allow_skip', 'return_ivr', 'noanswer', 'repeat_msg'];
 try {
-    $rows = $db->getAll("SHOW COLUMNS FROM `announcementtts`", DB_FETCHMODE_ASSOC);
-    $existing = is_array($rows) ? array_column($rows, 'Field') : [];
+    $columns = $db->getAll("SHOW COLUMNS FROM `announcementtts`", DB_FETCHMODE_ASSOC);
+    $existing = is_array($columns) ? array_column($columns, 'Field') : [];
 
-    foreach ($needs as $col => $sql) {
-        if (!in_array($col, $existing, true)) {
-            $db->query($sql);
+    foreach ($drop_columns as $col) {
+        if (in_array($col, $existing, true)) {
+            $db->query("ALTER TABLE `announcementtts` DROP COLUMN `$col`");
         }
     }
 
