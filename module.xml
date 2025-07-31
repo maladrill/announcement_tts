@@ -2,7 +2,7 @@
   <rawname>announcementtts</rawname>
   <repo>unsupported</repo>
   <name>Announcements TTS</name>
-  <version>1.0.7</version>
+  <version>17.0.0</version>
   <publisher>SQS Polska</publisher>
   <license>GPLv3+</license>
   <licenselink>http://www.gnu.org/licenses/gpl-3.0.txt</licenselink>
@@ -12,8 +12,8 @@
   <category>Applications</category>
   <more-info>https://github.com/maladrill/announcement_tts</more-info>
   <description><![CDATA[
-   Plays back one of the system recordings (optionally allowing the user to skip it)
-   and then goes to another destination, with automatic TTS generation via OpenAI.
+   Plays back one of the system recordings and then goes to another destination, 
+   with automatic TTS generation via OpenAI.
    Add your OpenAI key to /etc/asterisk/openai.key after the installation.
    In shell paste below command (don’t forget to add your openAI key):
    touch /etc/asterisk/openai.key && echo "<YOUR_API_KEY_HERE>" > /etc/asterisk/openai.key]]>
