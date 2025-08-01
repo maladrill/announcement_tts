@@ -11,42 +11,98 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: views/form.php:10
+# This file is part of FreePBX.
+#
+# For licensing information, please see the file named LICENSE located in the module directory
+#
+# FreePBX language template for announcementtts
+# Copyright (C) 2024 SQS Polska
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: announcementtts\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-08-01 00:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: views/form.php:50
 msgid "Description"
 msgstr ""
 
-#: views/form.php:20
+#: views/form.php:57
+msgid "The name of this announcement."
+msgstr ""
+
+#: views/form.php:67
 msgid "Announcement Text"
 msgstr ""
 
-#: views/form.php:30
+#: views/form.php:73
+msgid "Enter the text to be converted to speech."
+msgstr ""
+
+#: views/form.php:90
 msgid "Language"
 msgstr ""
 
-#: views/form.php:40
+#: views/form.php:96
+msgid "Select the language used for text-to-speech conversion."
+msgstr ""
+
+#: views/form.php:113
 msgid "Voice"
 msgstr ""
 
-#: views/form.php:50
-msgid "Generated Audio File"
+#: views/form.php:119
+msgid "Choose the voice model for speech synthesis."
 msgstr ""
 
-#: views/form.php:60
+#: views/form.php:132
+msgid "Audio File"
+msgstr ""
+
+#: views/form.php:136
+msgid "Your browser does not support audio playback."
+msgstr ""
+
+#: views/form.php:147
 msgid "Destination after Playback"
 msgstr ""
 
-#: views/grid.php:10
+#: views/form.php:153
+msgid "Where to send the call after playback ends."
+msgstr ""
+
+#: views/grid.php:11
+msgid "Add"
+msgstr ""
+
+#: views/grid.php:16
+msgid "Description"
+msgstr ""
+
+#: views/grid.php:17
+msgid "Destination"
+msgstr ""
+
+#: views/grid.php:18
 msgid "Actions"
 msgstr ""
 
+#: views/rnav.php:2
+msgid "List Announcementstts"
+msgstr ""
+
 #: views/rnav.php:3
-msgid "Add Announcement"
+msgid "Add Announcementstts"
 msgstr ""
 
-#: views/rnav.php:4
-msgid "List Announcements"
+#: views/rnav.php:8
+msgid "Destinations"
 msgstr ""
 
-#: functions.inc.php
-msgid "Announcement TTS: %s"
-msgstr ""
