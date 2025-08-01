@@ -20,6 +20,7 @@ In the Linux shell paste the below command (don't forget to add your openAI  key
 touch /etc/asterisk/openai.key & echo "-<YOUR_API_KEY_HERE>" > /etc/asterisk/openai.key 
 Then go to: Admin -> Module Admin -> Upload and choose Download (From Web) and paste this link: https://github.com/maladrill/announcement_tts/archive/refs/heads/main.zip 
 Then click Manage Local Modules and find Anouncements TTS and chose Install and then Process. 
+![Announcement TTS Screenshot](screenshot.png)
 ### TODO
 Fix the playback of the recording - it doesn't work
 Add config page in Settings to hold OpenAI API key
