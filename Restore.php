@@ -15,13 +15,9 @@ class Restore Extends Base\RestoreBase{
 		$fields = [
 			'description',
 			'recording_id',
-			'allow_skip',
 			'post_dest',
-			'return_ivr',
-			'noanswer',
-			'repeat_msg',
 		];
-		$sth = $this->FreePBX->Database->prepare("INSERT INTO announcementtts (`announcementtts_id`, `description`, `recording_id`, `allow_skip`, `post_dest`, `return_ivr`, `noanswer`, `repeat_msg`) VALUES (:announcement_id, :description, :recording_id, :allow_skip, :post_dest, :return_ivr, :noanswer, :repeat_msg)");
+		$sth = $this->FreePBX->Database->prepare("INSERT INTO announcementtts (`announcementtts_id`, `description`, `post_dest`) VALUES (:announcement_id, :description, :recording_id, :post_dest)");
 		foreach ($configs as $config) {
 			foreach ($fields as $field) {
 				isset($config[$field])? ${$field} = $config[$field] : ${$field} = null;
@@ -29,12 +25,7 @@ class Restore Extends Base\RestoreBase{
 			$sth->execute([
 				":announcementtts_id" => $config['announcement_id'],
 				":description" => $config['description'],
-				":recording_id" => $config['recording_id'],
-				":allow_skip" => $config['allow_skip'],
 				":post_dest" => $config['post_dest'],
-				":return_ivr" => $config['return_ivr'],
-				":noanswer" => $config['noanswer'],
-				":repeat_msg" => $config['repeat_msg']
 			]);
 		}
 	}
