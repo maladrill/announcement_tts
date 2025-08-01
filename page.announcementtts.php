@@ -5,11 +5,11 @@ if (!defined('FREEPBX_IS_AUTH')) { die('No direct script access allowed'); }
 
 $request = $_REQUEST;
 
-// 1) Proceduralne przechwycenie DELETE
+// 1) Procedurally catch DELETE
 if (!empty($request['action']) && $request['action'] === 'delete' && !empty($request['extdisplay'])) {
     // funkcja z functions.inc.php
     announcementtts_delete($request['extdisplay']);
-    // przeładuj dialplan i UI
+    // reload dialplan i UI
     needreload();
     // needreload() natychmiast przerwie dalsze renderowanie i zrobi redirect
 }
@@ -18,7 +18,7 @@ $heading   = _("Announcementtts");
 $view      = !empty($_GET['view']) ? $_GET['view'] : '';
 $usagehtml = '';
 
-// 2) Twoja dotychczasowa logika widoków
+// 2) View logic
 switch ($view) {
     case "form":
         if (!empty($request['extdisplay'])) {
