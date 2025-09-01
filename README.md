@@ -18,8 +18,8 @@ Log into to your FreePBX shell and create file containing your key in /etc/aster
  
 ### For example:
 In the Linux shell paste the below command (don't forget to add your openAI  key):
-t
-ouch /etc/asterisk/openai.key & echo "-<YOUR_API_KEY_HERE>" > /etc/asterisk/openai.key 
+
+`touch /etc/asterisk/openai.key & echo "-<YOUR_API_KEY_HERE>" > /etc/asterisk/openai.key`
 
 Then go to: Admin -> Module Admin -> Upload and choose Download (From Web) and paste this link: https://github.com/maladrill/announcement_tts/archive/refs/heads/main.zip 
 
