@@ -160,7 +160,8 @@ class Announcementtts extends \FreePBX_Helpers implements \BMO {
 
 		// Generate TTS file
 		try {
-			$wavFilename = generate_tts($id, $text, $language, $voice);
+			$row = announcementtts_get($id); // funkcja jest w functions.inc.php
+			$wavFilename = generate_tts($id, $row['text'], $row['language'], $row['voice']);
 			$fullPath = "/var/lib/asterisk/sounds/custom/{$wavFilename}";
 			$upd = $this->db->prepare(
 				"UPDATE announcementtts SET audio_file = :audio_file WHERE announcementtts_id = :id"
@@ -212,7 +213,8 @@ class Announcementtts extends \FreePBX_Helpers implements \BMO {
 		// Only regenerate audio if content changed
 		if ($text !== $oldText || $language !== $oldLang || $voice !== $oldVoice) {
 			try {
-				$wav = generate_tts($announcementtts_id, $text, $language, $voice);
+				$row = announcementtts_get($announcementtts_id);
+				$wav = generate_tts($announcementtts_id, $row['text'], $row['language'], $row['voice']);
 				$fullPath = "/var/lib/asterisk/sounds/custom/{$wav}";
 				$upd = $this->db->prepare(
 					"UPDATE announcementtts SET audio_file = :audio_file WHERE announcementtts_id = :id"
