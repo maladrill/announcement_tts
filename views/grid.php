@@ -4,6 +4,7 @@
 //
 //
 ?>
+<script src="modules/announcementtts/assets/js/announcementtts.js"></script>
 <script>
 	var destinations = <?php echo json_encode(FreePBX::Modules()->getDestinations(), JSON_THROW_ON_ERROR)?>;
 </script>
