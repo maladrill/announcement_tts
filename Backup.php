@@ -10,6 +10,7 @@ class Backup Extends Base\BackupBase{
       $rows = $service->all();
       $this->addConfigs(['schema' => 1, 'announcements' => $rows]);
       foreach ($rows as $row) {
+        if (Service::isSilent((string) ($row['text'] ?? ''))) { continue; }
         $path = $service->audioPath($row['audio_file'] ?? '');
         if ($path === null) {
           $this->log('Audio missing for announcement ID ' . $row['announcementtts_id'], 'WARNING');

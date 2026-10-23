@@ -37,14 +37,20 @@ class Service {
         return $value;
     }
 
+    public static function isSilent(string $text): bool {
+        return preg_match('/^[\p{Z}\s]*$/uD', $text) === 1;
+    }
+
     public function validate(array $data, bool $registered = true): array {
         $row = [
             'description' => self::field($data['description'] ?? null, 'description', 50),
-            'text' => self::field($data['text'] ?? null, 'announcement text', 4096),
+            'text' => self::field($data['text'] ?? null, 'announcement text', 4096, true),
             'language' => self::field($data['language'] ?? 'pl', 'language', 10),
             'voice' => self::field($data['voice'] ?? 'fable', 'voice', 20),
             'post_dest' => self::destination($data['post_dest'] ?? null),
         ];
+        // Empty and whitespace-only text explicitly disable playback.
+        if (self::isSilent($row['text'])) { $row['text'] = ''; }
         if (!in_array($row['language'], self::LANGUAGES, true)) { throw new \InvalidArgumentException('Unsupported language.'); }
         if (!in_array($row['voice'], TtsGenerator::VOICES, true)) { throw new \InvalidArgumentException('Unsupported voice for tts-1.'); }
         if ($registered && !in_array($row['post_dest'], ($this->destinations)(), true)) {
@@ -92,17 +98,18 @@ class Service {
             $stmt = $this->db->prepare('SELECT announcementtts_id FROM announcementtts WHERE description = ? AND announcementtts_id <> ?');
             $stmt->execute([$data['description'], $id ?? 0]);
             if ($stmt->fetchColumn() !== false) { throw new \InvalidArgumentException('Announcement description already exists.'); }
+            $silent = $data['text'] === '';
             $changed = !$old || $regenerate || !$this->audioPath($old['audio_file'] ?? '');
             foreach (['text', 'language', 'voice'] as $key) { $changed = $changed || ($old[$key] ?? null) !== $data[$key]; }
             $newPath = null;
             try {
-                if ($changed) {
+                if (!$silent && $changed) {
                     $name = ($this->generate)($data['text'], $data['voice'], $this->directory);
                     $newPath = $this->audioPath($this->directory . '/' . $name);
                     if ($newPath === null) { throw new \RuntimeException('Generator did not publish valid module audio.'); }
                     TtsGenerator::assertWav($newPath);
                 }
-                $data['audio_file'] = $newPath ?? $old['audio_file'];
+                $data['audio_file'] = $silent ? null : ($newPath ?? $old['audio_file']);
                 $this->db->beginTransaction();
                 if ($id === null) {
                     $stmt = $this->db->prepare('INSERT INTO announcementtts (description, `text`, language, voice, post_dest, audio_file) VALUES (:description, :text, :language, :voice, :post_dest, :audio_file)');
@@ -167,7 +174,9 @@ class Service {
                     $data['announcementtts_id'] = $id;
                     $data['audio_file'] = null;
                     $oldName = basename((string) ($row['audio_file'] ?? ''));
-                    if (isset($audioSources[$oldName])) {
+                    if ($data['text'] === '') {
+                        // A silent announcement intentionally has no WAV, including in older backups.
+                    } elseif (isset($audioSources[$oldName])) {
                         $source = $audioSources[$oldName];
                         TtsGenerator::assertWav($source);
                         $name = 'announcementtts_' . bin2hex(random_bytes(16)) . '.wav';

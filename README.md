@@ -1,16 +1,16 @@
-# Announcements TTS dla FreePBX 17
+# Announcements TTS for FreePBX 17
 
-Moduł generuje nagranie OpenAI TTS, odtwarza je w Asterisk i przekazuje połączenie do wybranego celu FreePBX. Generowanie odbywa się podczas zapisu konfiguracji, poza obsługą połączeń. Odtwarzanie istniejących nagrań nie wymaga dostępu do API.
+Generate OpenAI TTS recordings, play them in Asterisk, and route calls to a selected FreePBX destination. Generation happens when configuration is saved, outside the call path. Playing existing recordings does not require API access.
 
-## Wymagania
+## Requirements
 
-- FreePBX 17, PHP 8.2 lub 8.3, MariaDB/InnoDB.
-- Rozszerzenia PHP: `curl`, `mbstring`, `pdo_mysql`; dostępne `proc_open`.
-- FFmpeg w `/usr/bin/ffmpeg`.
-- Katalog `ASTVARLIBDIR/sounds/custom` zapisywalny dla użytkownika FreePBX/Asterisk.
-- Połączenie HTTPS do `api.openai.com` i poprawny systemowy magazyn certyfikatów CA.
+- FreePBX 17, PHP 8.2 or 8.3, MariaDB/InnoDB.
+- PHP extensions: `curl`, `mbstring`, `pdo_mysql`; available `proc_open`.
+- FFmpeg at `/usr/bin/ffmpeg`.
+- `ASTVARLIBDIR/sounds/custom` writable by the FreePBX/Asterisk service user.
+- HTTPS access to `api.openai.com` and a working system CA certificate store.
 
-Przykładowe przygotowanie Debian 12, jako root:
+Example preparation on Debian 12, as root:
 
 ```bash
 apt-get update
@@ -24,57 +24,59 @@ chown root:asterisk /etc/asterisk/openai.key
 chmod 0640 /etc/asterisk/openai.key
 ```
 
-Wprowadź klucz API do `/etc/asterisk/openai.key` za pomocą edytora uruchomionego jako root. Plik ma zawierać wyłącznie klucz. Nie umieszczaj go w poleceniu powłoki, repozytorium ani zgłoszeniu. Moduł nie dodaje klucza do kopii zapasowej. Konto API powinno mieć dostęp wyłącznie do wymaganej usługi i odpowiedni limit wydatków.
+Enter the API key into `/etc/asterisk/openai.key` using an editor running as root. The file must contain only the key. Keep credentials out of shell command lines, repositories and issue reports. The module does not include the key in backups. Limit the API account to the required service and configure an appropriate spending limit.
 
-Zainstaluj archiwum przez **Admin → Module Admin → Upload Modules**, następnie zainstaluj lub zaktualizuj `announcementtts`. W przypadku utworzenia katalogów przez root wykonaj standardowe `fwconsole chown`.
+Upload the archive through **Admin → Module Admin → Upload Modules**, then install or upgrade `announcementtts`. Run the standard `fwconsole chown` if directories were created by root.
 
-## Użycie
+## Usage
 
-1. Otwórz **Applications → Announcements TTS**.
-2. Podaj unikalny opis do 50 znaków i tekst od 1 do 4096 znaków.
-3. Wybierz głos obsługiwany przez `tts-1` i cel po odtworzeniu.
-4. Zapisz. Po poprawnym wygenerowaniu nagrania wykonaj **Apply Config**.
-5. W edycji komunikatu dostępny jest podgląd WAV i opcja jawnego ponownego generowania.
+1. Open **Applications → Announcements TTS**.
+2. Enter a unique description of up to 50 characters and announcement text of up to 4096 characters.
+3. Select a voice supported by `tts-1` and the destination after playback.
+4. Save, then select **Apply Config** after successful generation.
+5. The edit form provides a WAV preview and an explicit regeneration option.
 
-Pole języka jest metadanymi. Model mówi w języku wprowadzonego tekstu; ustawienie nie tłumaczy tekstu ani nie wymusza języka parametrem API.
+**Empty or whitespace-only text intentionally disables playback.** It is stored as empty text with no audio file reference. Saving it makes no API call and creates no placeholder WAV, even when regeneration is selected. After Apply Config, the announcement routes directly to its destination without `Playback()`, `Answer()` or `Wait()`, preserving the channel's answer state. Clearing previously populated text disables the old recording after the configuration is applied. Entering text again generates new audio.
 
-Głosy: `alloy`, `ash`, `coral`, `echo`, `fable`, `nova`, `onyx`, `sage`, `shimmer`. Model i endpoint zachowują dotychczasowy wybór `tts-1` / Speech API; przed przyszłą migracją dostawcy należy sprawdzić aktualny cykl życia API.
+The language field is metadata. Speech follows the language of the entered text; this setting does not translate text or force the language through an API parameter.
 
-## Zachowanie przy błędach i bezpieczeństwo
+Supported voices: `alloy`, `ash`, `coral`, `echo`, `fable`, `nova`, `onyx`, `sage`, `shimmer`. The existing `tts-1` model and Speech API workflow are retained; check the provider's current API lifecycle before a future migration.
 
-- Nieudane generowanie nie tworzy niekompletnego rekordu i nie zmienia poprzedniego tekstu, celu ani ścieżki nagrania.
-- Po błędzie można ponowić zapis. Brakujący plik jest generowany także przy niezmienionym tekście.
-- Audio jest weryfikowane jako WAV PCM 16-bit, mono, 8000 Hz i publikowane pod nową nazwą przez atomowe `rename()`.
-- Jeden zapis/generowanie/przywracanie na danej centrali może działać jednocześnie. Drugie żądanie otrzyma komunikat o zajętości.
-- Mutacje formularza wymagają POST i tokenu sesji; podgląd audio wymaga uprawnień do modułu.
-- Opisy nie trafiają do kodu dialplanu. Cele są sprawdzane po stronie serwera.
-- Treść komunikatu i odpowiedzi błędów dostawcy nie są zapisywane do logów modułu.
+## Failure handling and security
 
-Poprzednie pliki WAV są celowo zachowywane po zmianie lub usunięciu rekordu: załadowany dialplan i rozpoczęte połączenia mogą nadal korzystać z wcześniejszej wersji. Moduł nie usuwa ich automatycznie. Do kopii modułu trafiają aktualne nagrania wskazane w bazie. Retencję poprzednich wersji należy uwzględnić w utrzymaniu przestrzeni dyskowej; nie należy usuwać ich przed udanym przeładowaniem i zakończeniem trwających połączeń.
+- Failed generation creates no incomplete record and preserves the previous text, destination and audio reference.
+- A failed operation can be retried. Saving unchanged nonempty text also regenerates a missing file.
+- Audio is verified as WAV PCM 16-bit, mono, 8000 Hz, then published under a unique filename using atomic `rename()`.
+- One save, generation or restore operation can run at a time. A concurrent request receives a busy error.
+- GUI mutations require POST and a session token; audio previews require module access.
+- User descriptions do not become dialplan code. Destinations are validated server-side.
+- Announcement contents and provider error response bodies are not written to module logs.
 
-## Kopie zapasowe
+Retired WAV files are deliberately retained after a change or deletion: the loaded dialplan and calls already in progress may still use an earlier version. The module does not delete them automatically. Module backups include current audio referenced by the database. Account for retired audio in disk retention procedures; do not delete it before a successful reload and completion of active calls.
 
-Format kopii zawiera wszystkie pola rekordu oraz aktualne pliki WAV. Przywracanie zachowuje ID i dostosowuje ścieżki do `ASTVARLIBDIR` na docelowej centrali.
+## Backup and restore
 
-Starsze kopie wersji 17.0.2 zawierały jedynie konfigurację. Przy ich odtwarzaniu moduł zgłasza brak nagrania; należy jawnie wygenerować je ponownie. Przywracanie nie wykonuje płatnych żądań API.
+Backups contain every announcement field and its current WAV. Restore preserves IDs and relocates audio to the destination system's `ASTVARLIBDIR`. Intentionally empty announcements require no WAV and produce no missing-audio warning. Stale audio references in their backups are ignored.
+
+Older 17.0.2 backups contain configuration only. For nonempty text, restore reports missing audio and it must be explicitly regenerated. Restore never issues paid API requests.
 
 ## GraphQL
 
-Wymagane zakresy: `gql:announcementtts:read` i/lub `gql:announcementtts:write`.
+Required scopes: `gql:announcementtts:read` and/or `gql:announcementtts:write`.
 
-- `addAnnouncementtts`: `description`, `text`, `post_dest`; opcjonalnie `language`, `voice`.
-- `updateAnnouncementtts`: te same pola oraz `announcementtts_id`; opcjonalnie `regenerate`.
-- `removeAnnouncementtts`: numeryczne `id`.
-- Zapytania: `announcementtts(id: ...)`, `allAnnouncementstts`.
+- `addAnnouncementtts`: `description`, `text`, `post_dest`; optional `language`, `voice`.
+- `updateAnnouncementtts`: the same fields plus `announcementtts_id`; optional `regenerate`.
+- `removeAnnouncementtts`: numeric `id`.
+- Queries: `announcementtts(id: ...)`, `allAnnouncementstts`.
 
-Argumenty ID przyjmują numeryczne ID z `announcementtts_id`, a nie zakodowane Relay `id`. Pola dawnego modułu nagrań (`recording_id`, `allow_skip`, `return_ivr`, `noanswer`, `repeat_msg`) nie są obsługiwane. Zapisy przez GraphQL zaznaczają konieczność przeładowania FreePBX.
+The `text` field must be supplied, but an empty string is valid and disables playback. ID arguments use the numeric `announcementtts_id`, not the encoded Relay `id`. Fields inherited from the conventional recording module (`recording_id`, `allow_skip`, `return_ivr`, `noanswer`, `repeat_msg`) are not supported. GraphQL changes mark the FreePBX configuration as needing a reload.
 
-## Testy
+## Tests
 
 ```bash
 php tests/run.php
 ```
 
-Testy wymagają `pdo_sqlite`, `mbstring` i FFmpeg. Korzystają z tymczasowej bazy SQLite i atrap FreePBX/API; nie potrzebują klucza i nie wykonują żądań do OpenAI. CI uruchamia je na PHP 8.2 i 8.3.
+Tests require `pdo_sqlite`, `mbstring` and FFmpeg. They use a temporary SQLite database and FreePBX/API doubles; no API key or OpenAI requests are needed. CI runs the checks on PHP 8.2 and 8.3.
 
-Testy na rzeczywistej centrali, MariaDB i bibliotece GraphQL opisuje [TESTING.md](TESTING.md). Licencja: GPLv3+; zobacz [LICENSE](LICENSE).
+See [TESTING.md](TESTING.md) for tests against a real PBX, MariaDB and the GraphQL library. License: GPLv3+; see [LICENSE](LICENSE).

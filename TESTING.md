@@ -1,43 +1,50 @@
-# Testy integracyjne 17.0.3
+# Integration tests for 17.0.4
 
-## Przygotowanie
+## Preparation
 
-Użyj wydzielonej centrali FreePBX 17 na Debian 12/PHP 8.2. Przed instalacją wykonaj snapshot VM/CT. Dotychczasowy mechanizm przywracania modułu 17.0.2 jest wadliwy, więc jego własna kopia nie zastępuje snapshotu. Nie testuj na centrali obsługującej klientów.
+Use an isolated FreePBX 17 PBX on Debian 12/PHP 8.2. Take a VM/CT snapshot before installation. The 17.0.2 module restore implementation is defective, so its own backup is not a replacement for a snapshot. Do not run these tests on a customer PBX.
 
-1. Zainstaluj wymagania i przygotuj chroniony plik klucza zgodnie z README.md.
-2. Zainstaluj wersję z gałęzi `fix/freepbx17-tts-reliability` przez Module Admin. Archiwum: `https://github.com/maladrill/announcement_tts/archive/refs/heads/fix/freepbx17-tts-reliability.zip`.
-3. Wykonaj `fwconsole chown`, następnie `fwconsole reload`. Zweryfikuj wersję w Module Admin.
-4. Przygotuj testowy numer wewnętrzny i trasę do komunikatu. Ogranicz dostęp do centrali do sieci administracyjnej.
+1. Install prerequisites and prepare the protected key file as described in README.md.
+2. Install the `fix/freepbx17-tts-reliability` branch through Module Admin. Archive: `https://github.com/maladrill/announcement_tts/archive/refs/heads/fix/freepbx17-tts-reliability.zip`.
+3. Run `fwconsole chown`, then `fwconsole reload`. Confirm version 17.0.4 in Module Admin.
+4. Prepare a test extension and an inbound route to the announcement. Restrict PBX administration to the management network.
 
-## Scenariusze
+## Scenarios
 
-| Test | Oczekiwany wynik |
+| Test | Expected result |
 | --- | --- |
-| Nowy komunikat po polsku, głos `fable` | Zapis sukcesem, poprawny WAV w podglądzie, po Apply Config pełne nagranie i przejście do wskazanego numeru. |
-| Edycja wyłącznie opisu i celu | Brak nowego żądania TTS; zmiana celu zaczyna działać po Apply Config. |
-| Zmiana tekstu lub głosu | Nowy plik i nowa ścieżka w bazie; poprzedni plik pozostaje dostępny do przeładowania. |
-| Jawne ponowne generowanie | Nowy plik mimo identycznego tekstu. |
-| Zapis po odświeżeniu przeglądarki | Po udanym POST następuje przekierowanie do listy; odświeżenie nie generuje kolejnego nagrania. |
-| Błąd odczytu klucza przy edycji | Widoczny błąd, zachowany poprzedni rekord i dźwięk; wpisany nowy tekst pozostaje w formularzu. |
-| Ponowienie po usunięciu przyczyny błędu | Poprawny zapis bez konieczności dalszej zmiany tekstu. |
-| Brakujący plik WAV | Ponowny zapis niezmienionych pól odtwarza nagranie. |
-| Dwa równoczesne zapisy | Drugie żądanie zgłasza zajętość; brak pomieszania tekstów i nagrań. |
-| Opis 51 znaków, tekst 4097 znaków, pusty tekst, nieistniejący cel | Odrzucenie po stronie serwera, także po pominięciu walidacji przeglądarki. |
-| Usunięcie przez formularz | Rekord znika i pojawia się wymaganie Apply Config; GET ani POST bez tokenu nie usuwają rekordu. |
-| Podgląd audio jako administrator bez dostępu do modułu | Odmowa dostępu, brak treści WAV. |
-| Zmiana celu globalnie w FreePBX | Referencja `post_dest` zostaje poprawnie zaktualizowana. |
-| Opis zawierający `${LEN(test)}` | Dialplan zawiera wyłącznie `AnnouncementTTS ID <numer>`, bez treści opisu. |
+| New Polish announcement with `fable` | Save succeeds, preview plays valid WAV, and after Apply Config a call hears the full recording and reaches the selected extension. |
+| Change description/destination only | No additional TTS request; the new destination is used after Apply Config. |
+| Change text or voice | A new file and database reference; the previous WAV remains available to the loaded dialplan. |
+| Explicit regeneration | A new file even with identical nonempty text. |
+| Refresh after successful save | POST redirects to the list; refresh does not repeat generation. |
+| Unreadable key during an edit | Visible error; previous row and audio remain; new entered text stays in the form. |
+| Retry after fixing the error | Save succeeds without another text change. |
+| Missing WAV with nonempty text | Saving unchanged fields regenerates audio. |
+| New announcement with empty text | Save succeeds without API access or a WAV; after Apply Config the call immediately reaches the selected destination. |
+| Whitespace-only text | Same behavior as empty text; stored text is normalized to an empty string. |
+| Clear an existing recording's text | Audio reference becomes empty; after Apply Config the old recording is skipped. No Answer, Wait or Playback is emitted for this announcement. |
+| Empty text with regeneration selected | No API call, no WAV, and direct routing is preserved. |
+| Replace empty text with nonempty text | New audio is generated; after Apply Config normal playback resumes. |
+| Two simultaneous saves | The second request reports busy; text and audio do not become mixed. |
+| Description over 50 characters, text over 4096, nonexistent destination | Rejected server-side even when browser validation is bypassed. |
+| Delete using the form | Row disappears and Apply Config is required; GET and tokenless POST do not delete it. |
+| Audio preview without module permission | Access denied; no WAV content returned. |
+| Change a destination globally in FreePBX | `post_dest` reference is updated correctly. |
+| Description containing `${LEN(test)}` | Dialplan contains only `AnnouncementTTS ID <number>`, never the user description. |
 
-Symulacja braku klucza na TEST: zmień uprawnienia `/etc/asterisk/openai.key` na `0600` przy właścicielu root, wykonaj zapis w GUI, następnie przywróć `0640`. Nie przesyłaj zawartości pliku.
+To simulate an unreadable key on TEST, set `/etc/asterisk/openai.key` to mode `0600` with root ownership, attempt a GUI save, then restore mode `0640`. Never send the key file contents. An empty-text save must succeed in this state because it needs no API request.
 
-Weryfikacja dialplanu jako root, dla ID widocznego w adresie edycji:
+Inspect the dialplan as root, using the numeric ID shown in the edit URL:
 
 ```bash
 fwconsole reload
 asterisk -rx 'dialplan show app-announcementtts-1'
 ```
 
-Zastąp `1` rzeczywistym ID. Docelowy WAV powinien mieć: `pcm_s16le`, `sample_rate=8000`, `channels=1`. Sprawdź wybrany plik:
+Replace `1` with the actual ID. For an empty announcement expect a constant NoOp and Goto only, preserving the incoming channel's answer state. Test it both from an unanswered inbound route and from an already answered IVR.
+
+For nonempty text, the selected WAV must report `pcm_s16le`, `sample_rate=8000`, `channels=1`:
 
 ```bash
 ffprobe -v error -select_streams a:0 \
@@ -45,26 +52,26 @@ ffprobe -v error -select_streams a:0 \
     -of default=noprint_wrappers=1 /var/lib/asterisk/sounds/custom/announcementtts_1.wav
 ```
 
-Ścieżkę zastąp aktualnym plikiem z rekordu; nowe nagrania mają losowy sufiks.
+Use the actual database file path; newly generated filenames have a random suffix.
 
 ## Backup/restore
 
-1. Utwórz dwa komunikaty z różnymi tekstami i celami.
-2. W module Backup wykonaj kopię obejmującą Announcements TTS.
-3. Przywróć ją na drugiej odizolowanej centrali TEST z zainstalowanymi modułami celów. Plik klucza nie jest wymagany do odtworzenia ani odsłuchu istniejących nagrań.
-4. Sprawdź ID, teksty, języki, głosy, cele i oba nagrania. Wykonaj Apply Config i połączenia.
-5. Dla starej kopii konfiguracji z 17.0.2 oczekuj ostrzeżeń o brakujących plikach; generowanie wymaga jawnego zapisu i klucza.
+1. Create two audible announcements with different texts/destinations and a third with empty text.
+2. Run a FreePBX Backup job including Announcements TTS.
+3. Restore to another isolated TEST PBX with the destination modules installed. The API key is not needed to restore or play existing audio, or to route an intentionally empty announcement.
+4. Verify IDs, text, language, voice, destinations and both recordings. Run Apply Config and place calls through all three announcements. The empty announcement must produce no missing-audio warning.
+5. A 17.0.2 configuration-only backup should warn about missing files for nonempty text; generating them requires an explicit save and a key.
 
 ## GraphQL
 
-Użyj GraphQL Explorer z zakresem `gql:announcementtts:write` i oddzielnie `gql:announcementtts:read`. W przykładzie cel `app-blackhole,hangup,1` musi istnieć na centrali.
+Use GraphQL Explorer with `gql:announcementtts:write` and separately `gql:announcementtts:read`. The example destination `app-blackhole,hangup,1` must exist on the PBX.
 
 ```graphql
 mutation {
   addAnnouncementtts(input: {
-    description: "Test GraphQL"
-    text: "Dzień dobry. Test komunikatu."
-    language: "pl"
+    description: "GraphQL test"
+    text: "This is a test announcement."
+    language: "en"
     voice: "fable"
     post_dest: "app-blackhole,hangup,1"
   }) {
@@ -73,10 +80,10 @@ mutation {
 }
 ```
 
-Otrzymane numeryczne ID wykorzystaj do `updateAnnouncementtts` i `removeAnnouncementtts`. Sprawdź zwracany ID aktualizacji, poprawną zmianę celu, sygnalizację Apply Config i usuwanie. Bez odpowiedniego zakresu operacje nie mogą być dostępne. Potwierdź także rozwiązywanie celu `app-announcementtts-ID,s,1` przez pole `destinationConnection`.
+Use the returned numeric ID for `updateAnnouncementtts` and `removeAnnouncementtts`. Verify the returned update ID, destination changes, reload notification and deletion. Repeat create/update using `text: ""`; it must save without a provider call, including with `regenerate: true`. Operations must be unavailable without the appropriate scope. Also verify resolving `app-announcementtts-ID,s,1` through `destinationConnection`.
 
-## Wyniki do przekazania
+## Results to report
 
-Podaj wersje FreePBX, PHP, Asterisk i FFmpeg, commit gałęzi oraz wynik każdego scenariusza. Przy błędzie dołącz czas wystąpienia, ID rekordu i zanonimizowany fragment logu. Nie przekazuj kluczy, tokenów, treści poufnych komunikatów ani danych klientów.
+Include FreePBX, PHP, Asterisk and FFmpeg versions, the branch commit and results for each scenario. For failures, include the timestamp, record ID and a redacted log excerpt. Never send API keys, tokens, confidential announcement contents or customer information.
 
-Powrót do stanu sprzed testów: przywróć wykonany wcześniej snapshot. Nie scalaj zmiany z `main`, dopóki testy centrali nie zostaną zakończone.
+To revert the tests, restore the preinstallation snapshot. Keep the PR unmerged until PBX integration tests have passed.

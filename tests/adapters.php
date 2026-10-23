@@ -176,4 +176,5 @@ namespace {
     $restore->runRestore();
     check($service->get($id)['audio_file'] === null && count($restore->logs) === 1, 'FreePBX restore adapter supports old configuration-only backups with an explicit warning');
     $service->save($id, $data);
+    require __DIR__ . '/silent.php';
 }

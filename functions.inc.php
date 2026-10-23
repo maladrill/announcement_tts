@@ -32,13 +32,15 @@ function announcementtts_get_config($engine) {
     foreach ($service->all() as $row) {
         $id = \FreePBX\modules\Announcementtts\Service::id($row['announcementtts_id']);
         $context = 'app-announcementtts-' . $id;
-        $ext->add($context, 's', '', new ext_answer(''));
-        $ext->add($context, 's', '', new ext_wait('1'));
         // User descriptions must never become executable dialplan expressions.
         $ext->add($context, 's', '', new ext_noop('AnnouncementTTS ID ' . $id));
-        $path = $service->audioPath($row['audio_file'] ?? '');
-        if ($path !== null) { $ext->add($context, 's', 'play', new ext_playback('custom/' . basename($path, '.wav') . ',noanswer')); }
-        else { error_log('[announcementtts] Missing audio for ID ' . $id); }
+        if (!\FreePBX\modules\Announcementtts\Service::isSilent((string) ($row['text'] ?? ''))) {
+            $ext->add($context, 's', '', new ext_answer(''));
+            $ext->add($context, 's', '', new ext_wait('1'));
+            $path = $service->audioPath($row['audio_file'] ?? '');
+            if ($path !== null) { $ext->add($context, 's', 'play', new ext_playback('custom/' . basename($path, '.wav') . ',noanswer')); }
+            else { error_log('[announcementtts] Missing audio for ID ' . $id); }
+        }
         try { $destination = \FreePBX\modules\Announcementtts\Service::destination($row['post_dest']); }
         catch (\InvalidArgumentException $e) { $destination = 'app-blackhole,hangup,1'; error_log('[announcementtts] Invalid destination for ID ' . $id); }
         $ext->add($context, 's', '', new ext_goto($destination));
@@ -59,5 +61,5 @@ function generate_tts($id, $text, $language, $voice) {
     $row = array_replace(announcementtts_get($id), compact('text', 'language', 'voice'));
     FreePBX::Announcementtts()->service()->save(\FreePBX\modules\Announcementtts\Service::id($id), $row, true);
     needreload();
-    return basename(announcementtts_get($id)['audio_file']);
+    return basename((string) announcementtts_get($id)['audio_file']);
 }

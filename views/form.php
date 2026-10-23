@@ -83,9 +83,9 @@ $VOICES = \FreePBX\modules\Announcementtts\TtsGenerator::VOICES;
         <i class="fa fa-question-circle fpbx-help-icon" data-for="text"></i>
       </div>
       <div class="col-md-9">
-        <textarea id="text" name="text" class="form-control" rows="4" maxlength="4096" required><?php echo htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></textarea>
+        <textarea id="text" name="text" class="form-control" rows="4" maxlength="4096"><?php echo htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></textarea>
         <span id="text-help" class="help-block fpbx-help-block">
-          <?php echo _("Enter the text to be converted to speech.") ?>
+          <?php echo _("Enter text to generate speech. Leave this field empty to skip playback and go directly to the selected destination.") ?>
         </span>
       </div>
     </div>
