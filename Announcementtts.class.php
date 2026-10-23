@@ -1,275 +1,127 @@
 <?php
-// License for all code of this FreePBX module can be found in the license file inside the module directory
-// Copyright 2015 Sangoma Technologies and 2025 SQS Polska.
-// vim: set ai ts=4 sw=4 ft=php: 
-
+// License: GPLv3+. Copyright Sangoma Technologies and SQS Polska.
 namespace FreePBX\modules;
+require_once __DIR__ . '/includes/Service.php';
+use FreePBX\modules\Announcementtts\Service;
 
 class Announcementtts extends \FreePBX_Helpers implements \BMO {
+    private $freepbx;
+    private Service $service;
+    private ?string $formError = null;
+    private bool $formSaved = false;
 
-	private $freepbx;
-
-	public function __construct($freepbx = null) {
-		parent::__construct($freepbx);
-		$this->freepbx = $freepbx;
-		$this->db = $this->freepbx->Database;
-	}
-
-	/**
-	 * Fetch all announcements (basic fields).
-	 */
-	public function getAnnouncementstts() {
-		$sql = "SELECT announcementtts_id, description, post_dest, text, language, voice, audio_file FROM announcementtts";
-		$sth = $this->db->prepare($sql);
-		$sth->execute();
-		return $sth->fetchAll(\PDO::FETCH_ASSOC);
-	}
-
-	/**
-	 * Get a single announcement by ID.
-	 */
-	public function getAnnouncementttsByID($id) {
-		$sql = "SELECT announcementtts_id, description, post_dest, text, language, voice, audio_file FROM announcementtts WHERE announcementtts_id = ?";
-		$sth = $this->db->prepare($sql);
-		$sth->execute([$id]);
-		return $sth->fetch(\PDO::FETCH_ASSOC);
-	}
-
-	/**
-	 * Return all descriptions except for the current ID (used for validation).
-	 */
-	public function getALLAnnouncementstts($id) {
-		$sql = "SELECT description FROM announcementtts";
-		if ($id) {
-			$sql .= ' WHERE announcementtts_id != :id ';
-		}
-		$sth = $this->db->prepare($sql);
-		if ($id) {
-			$sth->execute([":id" => $id]);
-		}
-		$res = $sth->fetchAll(\PDO::FETCH_COLUMN, 0);
-		return is_array($res) ? $res : [];
-	}
-
-	/**
-	 * Determine whether an AJAX request should be handled.
-	 */
-	public function ajaxRequest($req, $setting) {
-		return match ($req) {
-			"getData", "getJSON" => true,
-			default => false,
-		};
-	}
-
-	/**
-	 * Handle AJAX commands.
-	 */
-	public function ajaxHandler() {
-		$request = $_REQUEST;
-		switch ($request['command']) {
-			case "getData":
-				break;
-			case "getJSON":
-				return $this->getAnnouncementstts();
-			default:
-				break;
-		}
-	}
-
-	/**
-	 * Return action bar buttons depending on context.
-	 */
-	public function getActionBar($request) {
-		$buttons = [];
-		if ($request['display'] == 'announcementtts') {
-			$buttons = [
-				'delete' => ['name' => 'delete', 'id' => 'delete', 'value' => _('Delete')],
-				'reset'  => ['name' => 'reset', 'id' => 'reset', 'value' => _('Reset')],
-				'submit' => ['name' => 'submit', 'id' => 'submit', 'value' => _('Submit')],
-			];
-			if (empty($request['extdisplay'])) {
-				unset($buttons['delete']);
-			}
-			if (empty($_GET['view']) || $_GET['view'] != 'form') {
-				$buttons = [];
-			}
-		}
-		return $buttons;
-	}
-
-	/**
-	 * Module installation handler (currently handled by module.xml).
-	 */
-	public function install() {
-		// Tables are created via module.xml
-	}
-
-	/**
-	 * Module uninstallation handler – drop the main table.
-	 */
-        public function uninstall() {
-            try {
-                $sql = 'DROP TABLE IF EXISTS announcementtts';
-                $stmt = $this->db->prepare($sql); 
-                $stmt->execute();
-                return true;
-            } catch (\PDOException $e) {
-                error_log("[announcementtts] Uninstall error: " . $e->getMessage());
-                return false;
+    public function __construct($freepbx = null) {
+        parent::__construct($freepbx);
+        $this->freepbx = $freepbx;
+        $root = $freepbx->Config->get('ASTVARLIBDIR') ?: '/var/lib/asterisk';
+        $this->service = new Service($freepbx->Database, rtrim($root, '/') . '/sounds/custom', function (): array {
+            return array_keys($this->freepbx->Modules->getDestinations());
+        });
+    }
+    public function service(): Service { return $this->service; }
+    public function getAnnouncementstts() { return $this->service->all(); }
+    public function getAnnouncementttsByID($id) { return $this->service->get($id); }
+    public function getALLAnnouncementstts($id = null) {
+        $id = $id ? Service::id($id) : null;
+        return array_values(array_column(array_filter($this->getAnnouncementstts(), static fn($r) => $id === null || (int) $r['announcementtts_id'] !== $id), 'description'));
+    }
+    public function addAnnouncementtts($description, $post_dest, $text = '', $language = 'pl', $voice = 'fable') {
+        $id = $this->service->save(null, compact('description', 'post_dest', 'text', 'language', 'voice'));
+        needreload();
+        return $id;
+    }
+    public function editAnnouncementtts($id, $description, $post_dest, $text, $language = 'pl', $voice = 'fable', $regenerate = false) {
+        $id = $this->service->save(Service::id($id), compact('description', 'post_dest', 'text', 'language', 'voice'), (bool) $regenerate);
+        needreload();
+        return $id;
+    }
+    public function deleteAnnouncementtts($id) {
+        $this->service->delete($id);
+        needreload();
+        return true;
+    }
+    public function csrfToken(): string {
+        if (empty($_SESSION['announcementtts_csrf'])) { $_SESSION['announcementtts_csrf'] = bin2hex(random_bytes(32)); }
+        return $_SESSION['announcementtts_csrf'];
+    }
+    public function doConfigPageInit($page) {
+        if ($page !== 'announcementtts') { return; }
+        $action = $_REQUEST['action'] ?? '';
+        if (isset($_POST['delete'])) { $action = 'delete'; }
+        if (!in_array($action, ['add', 'edit', 'delete'], true)) { return; }
+        try {
+            if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') { throw new \InvalidArgumentException('Changes require POST.'); }
+            $token = $_POST['announcementtts_csrf'] ?? null;
+            if (!is_string($token) || !isset($_SESSION['announcementtts_csrf']) || !hash_equals($_SESSION['announcementtts_csrf'], $token)) {
+                throw new \InvalidArgumentException('Session verification failed. Reload the form and retry.');
             }
+            $id = $_POST['announcementtts_id'] ?? null;
+            if ($action === 'delete') {
+                $this->deleteAnnouncementtts($id);
+            } else {
+                $description = $_POST['description'] ?? null;
+                $post_dest = $_POST['post_dest'] ?? '';
+                if (!empty($_POST['goto0']) && is_string($_POST['goto0'])) { $post_dest = $_POST[$_POST['goto0'] . '0'] ?? ''; }
+                $text = $_POST['text'] ?? null;
+                $language = $_POST['language'] ?? 'pl';
+                $voice = $_POST['voice'] ?? 'fable';
+                if ($action === 'add') { $this->addAnnouncementtts($description, $post_dest, $text, $language, $voice); }
+                else { $this->editAnnouncementtts($id, $description, $post_dest, $text, $language, $voice, isset($_POST['regenerate'])); }
+            }
+            $this->formSaved = true;
+            // Post/Redirect/Get prevents repeated paid generation on a browser refresh.
+            if (!headers_sent()) { header('Location: config.php?display=announcementtts', true, 303); exit; }
+        } catch (\InvalidArgumentException | \RuntimeException $e) {
+            $this->formError = $e instanceof \PDOException ? _('Database operation failed. Existing audio was preserved.') : $e->getMessage();
+            error_log('[announcementtts] Save failed: ' . get_class($e));
+        } catch (\Throwable $e) {
+            $this->formError = _('Unable to save the announcement. Check the server configuration and retry.');
+            error_log('[announcementtts] Save failed: ' . get_class($e));
         }
-
-	public function backup($backup) {
-		// Unused – see Backup.php
-	}
-
-	public function restore($backup) {
-		// Unused – see Restore.php
-	}
-
-	public function doTests($db) {
-		// Basic test stub – always passes
-		return true;
-	}
-
-	/**
-	 * Add a new announcement using OpenAI TTS.
-	 */
-	public function addAnnouncementtts($description, $post_dest) {
-		$text     = $_REQUEST['text']     ?? '';
-		$language = $_REQUEST['language'] ?? 'en';
-		$voice    = $_REQUEST['voice']    ?? 'nova';
-
-		// Insert database record
-		$sql = "INSERT INTO announcementtts (
-			description, post_dest, `text`, language, voice
-		) VALUES (
-			:description, :post_dest, :text, :language, :voice
-		)";
-		$params = [
-			':description' => $description,
-			':post_dest'   => $post_dest,
-			':text'        => $text,
-			':language'    => $language,
-			':voice'       => $voice,
-		];
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute($params);
-
-		$id = $this->freepbx->Database->lastInsertId();
-
-		// Generate TTS file
-		try {
-			$row = announcementtts_get($id); // funkcja jest w functions.inc.php
-			$wavFilename = generate_tts($id, $row['text'], $row['language'], $row['voice']);
-			$fullPath = "/var/lib/asterisk/sounds/custom/{$wavFilename}";
-			$upd = $this->db->prepare(
-				"UPDATE announcementtts SET audio_file = :audio_file WHERE announcementtts_id = :id"
-			);
-			$upd->execute([
-				':audio_file' => $fullPath,
-				':id'         => $id,
-			]);
-		} catch (\Exception $e) {
-			error_log("AnnouncementTTS TTS error for ID {$id}: " . $e->getMessage());
-		}
-
-		return $id;
-	}
-
-	/**
-	 * Edit an existing announcement.
-	 * Regenerates audio file only if text, language or voice changed.
-	 */
-	public function editAnnouncementtts($announcementtts_id, $description, $post_dest) {
-		$old = $this->getAnnouncementttsByID($announcementtts_id);
-		$oldText  = $old['text']     ?? '';
-		$oldLang  = $old['language'] ?? '';
-		$oldVoice = $old['voice']    ?? '';
-
-		$text     = $_REQUEST['text']     ?? '';
-		$language = $_REQUEST['language'] ?? 'en';
-		$voice    = $_REQUEST['voice']    ?? 'nova';
-
-		// Update database
-		$sql = "UPDATE announcementtts SET
-			description = :description,
-			post_dest   = :post_dest,
-			`text`      = :text,
-			language    = :language,
-			voice       = :voice
-		WHERE announcementtts_id = :id";
-		$params = [
-			':description' => $description,
-			':post_dest'   => $post_dest,
-			':text'        => $text,
-			':language'    => $language,
-			':voice'       => $voice,
-			':id'          => $announcementtts_id,
-		];
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute($params);
-
-		// Only regenerate audio if content changed
-		if ($text !== $oldText || $language !== $oldLang || $voice !== $oldVoice) {
-			try {
-				$row = announcementtts_get($announcementtts_id);
-				$wav = generate_tts($announcementtts_id, $row['text'], $row['language'], $row['voice']);
-				$fullPath = "/var/lib/asterisk/sounds/custom/{$wav}";
-				$upd = $this->db->prepare(
-					"UPDATE announcementtts SET audio_file = :audio_file WHERE announcementtts_id = :id"
-				);
-				$upd->execute([
-					':audio_file' => $fullPath,
-					':id'         => $announcementtts_id,
-				]);
-			} catch (\Exception $e) {
-				error_log("AnnouncementTTS regen error for ID {$announcementtts_id}: " . $e->getMessage());
-			}
-		}
-
-		return true;
-	}
-
-	/**
-	 * Handle form submission for add/edit/delete from GUI.
-	 */
-	public function doConfigPageInit($page) {
-		$request = $_REQUEST;
-		$action = $request['action'] ?? '';
-		if (isset($request['delete'])) {
-			$action = 'delete';
-		}
-
-		$announcementtts_id = $request['announcementtts_id'] ?? false;
-		$description = $request['description'] ?? '';
-		$post_dest = $request['post_dest'] ?? '';
-
-		// Handle GUI destination picker
-		if (isset($request['goto0']) && $request['goto0']) {
-			$post_dest = $request[$request['goto0'].'0'];
-		}
-
-		switch ($action) {
-			case 'add':
-				$this->addAnnouncementtts($description, $post_dest);
-				needreload();
-				break;
-			case 'edit':
-				$this->editAnnouncementtts($announcementtts_id, $description, $post_dest);
-				needreload();
-				break;
-			default:
-				break;
-		}
-	}
-
-	/**
-	 * Load right-side navigation in form view.
-	 */
-	public function getRightNav($request) {
-		if (isset($_GET['view']) && $_GET['view'] == 'form') {
-			return load_view(__DIR__."/views/rnav.php", []);
-		}
-	}
+    }
+    public function formError(): ?string { return $this->formError; }
+    public function formSaved(): bool { return $this->formSaved; }
+    public function ajaxRequest($req, &$setting) {
+        $setting['authenticate'] = true;
+        return in_array($req, ['getJSON', 'audio'], true);
+    }
+    private function requireGuiAccess(): void {
+        $user = $_SESSION['AMP_user'] ?? null;
+        if (!is_object($user) || !$user->checkSection('announcementtts')) { throw new \RuntimeException('Access denied.'); }
+    }
+    public function ajaxHandler() { $this->requireGuiAccess(); return $this->getAnnouncementstts(); }
+    public function ajaxCustomHandler() {
+        if (($_REQUEST['command'] ?? '') !== 'audio') { return false; }
+        try { $this->requireGuiAccess(); }
+        catch (\Throwable $e) { http_response_code(403); return true; }
+        try {
+            $row = $this->getAnnouncementttsByID($_GET['id'] ?? null);
+            $path = $this->service->audioPath($row['audio_file'] ?? '');
+            if ($path === null) { throw new \RuntimeException('Audio is unavailable.'); }
+            $file = fopen($path, 'rb');
+            if ($file === false) { throw new \RuntimeException('Audio is unavailable.'); }
+        } catch (\Throwable $e) { http_response_code(404); return true; }
+        header('Content-Type: audio/wav');
+        header('Content-Disposition: inline; filename="' . basename($path) . '"');
+        header('Content-Length: ' . fstat($file)['size']);
+        header('Cache-Control: private, no-store');
+        header('X-Content-Type-Options: nosniff');
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'HEAD') { fpassthru($file); }
+        fclose($file);
+        return true;
+    }
+    public function getActionBar($request) {
+        if (($request['display'] ?? '') !== 'announcementtts' || ($_GET['view'] ?? '') !== 'form') { return []; }
+        return [
+            'reset' => ['name' => 'reset', 'id' => 'reset', 'value' => _('Reset')],
+            'submit' => ['name' => 'submit', 'id' => 'submit', 'value' => _('Submit')],
+        ];
+    }
+    public function getRightNav($request) {
+        return ($_GET['view'] ?? '') === 'form' ? load_view(__DIR__ . '/views/rnav.php', []) : null;
+    }
+    public function install() {}
+    public function uninstall() { $this->freepbx->Database->exec('DROP TABLE IF EXISTS announcementtts'); }
+    public function backup($backup) {}
+    public function restore($backup) {}
 }

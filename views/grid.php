@@ -6,7 +6,7 @@
 ?>
 <script src="modules/announcementtts/assets/js/announcementtts.js"></script>
 <script>
-	var destinations = <?php echo json_encode(FreePBX::Modules()->getDestinations(), JSON_THROW_ON_ERROR)?>;
+	var destinations = <?php echo json_encode(FreePBX::Modules()->getDestinations(), JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)?>;
 </script>
 <div id="toolbar-grid">
 	<a href="config.php?display=announcementtts&amp;view=form" class="btn btn-primary"><i class="fa fa-plus"></i> <?php echo _('Add')?></a>

@@ -1,58 +1,21 @@
 <?php
 if (!defined('FREEPBX_IS_AUTH')) { die('No direct script access allowed'); }
-// License for all code of this FreePBX module can be found in the license file inside the module directory
-// Copyright 2006-2014 Schmooze Com Inc. and 2025 SQS Polska
-
-$request = $_REQUEST;
-
-// 1) Procedurally catch DELETE
-if (!empty($request['action']) && $request['action'] === 'delete' && !empty($request['extdisplay'])) {
-    // funkcja z functions.inc.php
-    announcementtts_delete($request['extdisplay']);
-    // reload dialplan i UI
-    needreload();
-    // needreload() natychmiast przerwie dalsze renderowanie i zrobi redirect
-}
-
-$heading   = _("Announcementtts");
-$view      = !empty($_GET['view']) ? $_GET['view'] : '';
+$module = FreePBX::Announcementtts();
+$error = $module->formError();
+$view = $_REQUEST['view'] ?? '';
+if ($module->formSaved()) { $view = ''; }
 $usagehtml = '';
-
-// 2) View logic
-switch ($view) {
-    case "form":
-        if (!empty($request['extdisplay'])) {
-            $heading .= _(": Edit");
-            $usagehtml = FreePBX::View()->destinationUsage(
-                announcementtts_getdest($request['extdisplay'])
-            );
-        } else {
-            $heading .= _(": Add");
-        }
-        $content = load_view(
-            __DIR__ . '/views/form.php',
-            ['request' => $request, 'amp_conf' => $amp_conf]
-        );
-        break;
-
-    default:
-        $content = load_view(__DIR__ . '/views/grid.php');
-        break;
+if ($view === 'form' && !empty($_REQUEST['extdisplay'])) {
+    try { $usagehtml = FreePBX::View()->destinationUsage(announcementtts_getdest($_REQUEST['extdisplay'])); }
+    catch (\InvalidArgumentException $e) { $error = $e->getMessage(); $view = ''; }
 }
-
+$content = load_view(__DIR__ . ($view === 'form' ? '/views/form.php' : '/views/grid.php'));
 ?>
 <div class="container-fluid">
-    <h1><?php echo $heading ?></h1>
+    <h1><?php echo _('Announcements TTS') ?></h1>
+    <?php if ($error !== null): ?>
+        <div class="alert alert-danger" role="alert"><?php echo htmlspecialchars($error, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></div>
+    <?php endif; ?>
     <?php echo $usagehtml ?>
-    <div class="display full-border">
-        <div class="row">
-            <div class="col-sm-12">
-                <div class="fpbx-container">
-                    <div class="display <?php echo !empty($view) ? 'full' : 'no' ?>-border">
-                        <?php echo $content ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <div class="display full-border"><?php echo $content ?></div>
 </div>

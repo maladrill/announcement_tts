@@ -1,32 +1,38 @@
 <?php
 namespace FreePBX\modules\Announcementtts;
 use FreePBX\modules\Backup as Base;
-class Restore Extends Base\RestoreBase{
-	public function runRestore(){
-		$configs = $this->getConfigs();
-		$this->processData($configs);
-	}
 
-	public function processLegacy($pdo, $data, $tables, $unknownTables){
-		$this->restoreLegacyDatabase($pdo);
-	}
-
-	public function processData($configs){
-		$fields = [
-			'description',
-			'recording_id',
-			'post_dest',
-		];
-		$sth = $this->FreePBX->Database->prepare("INSERT INTO announcementtts (`announcementtts_id`, `description`, `post_dest`) VALUES (:announcement_id, :description, :recording_id, :post_dest)");
-		foreach ($configs as $config) {
-			foreach ($fields as $field) {
-				isset($config[$field])? ${$field} = $config[$field] : ${$field} = null;
-			}
-			$sth->execute([
-				":announcementtts_id" => $config['announcement_id'],
-				":description" => $config['description'],
-				":post_dest" => $config['post_dest'],
-			]);
-		}
-	}
+class Restore extends Base\RestoreBase {
+    public function runRestore() {
+        $configs = $this->getConfigs();
+        if (!is_array($configs)) { throw new \RuntimeException('Invalid announcement backup.'); }
+        if (isset($configs['schema']) && $configs['schema'] !== 1) { throw new \RuntimeException('Unsupported announcement backup schema.'); }
+        $rows = $configs['announcements'] ?? $configs;
+        if (!is_array($rows)) { throw new \RuntimeException('Invalid announcement backup rows.'); }
+        $sources = [];
+        $root = realpath($this->tmpdir . '/files');
+        foreach ($this->getFiles() as $file) {
+            if ($file->getType() !== 'announcementtts-audio') { continue; }
+            $path = $file->getPathname();
+            $real = realpath($path);
+            $name = $file->getFilename();
+            if (!preg_match('/^announcementtts_(?:[1-9][0-9]*|[a-f0-9]{32})\.wav$/D', $name)
+                || $root === false || $real === false || is_link($path) || !str_starts_with($real, $root . '/')) {
+                throw new \RuntimeException('Unsafe audio path in backup.');
+            }
+            $sources[$name] = $real;
+        }
+        $this->processData($rows, $sources);
+    }
+    public function processData($configs, array $sources = []) {
+        $missing = $this->FreePBX->Announcementtts->service()->restoreRows($configs, $sources);
+        foreach ($missing as $id) {
+            $this->log('Audio not included in backup for announcement ID ' . $id . '; regenerate it explicitly after restore.', 'WARNING');
+        }
+        needreload();
+    }
+    public function processLegacy($pdo, $data, $tables, $unknownTables) {
+        $rows = $pdo->query('SELECT * FROM announcementtts')->fetchAll(\PDO::FETCH_ASSOC);
+        $this->processData($rows);
+    }
 }
