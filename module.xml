@@ -2,35 +2,34 @@
   <rawname>announcementtts</rawname>
   <repo>unsupported</repo>
   <name>Announcements TTS</name>
-  <version>17.0.2</version>
+  <version>17.0.4</version>
   <publisher>SQS Polska</publisher>
   <license>GPLv3+</license>
   <licenselink>http://www.gnu.org/licenses/gpl-3.0.txt</licenselink>
   <changelog>
-    Fixed trenslation file
+    Fix transactional TTS saves, audio preview, backups, GraphQL and dialplan input handling.
+    Empty text skips playback and routes directly to the selected destination.
   </changelog>
   <category>Applications</category>
   <more-info>https://github.com/maladrill/announcement_tts</more-info>
   <description><![CDATA[
-   Plays back one of the system recordings and then goes to another destination, 
-   with automatic TTS generation via OpenAI.
-   Add your OpenAI key to /etc/asterisk/openai.key after the installation.
-   In shell paste below command (don’t forget to add your openAI key):
-   touch /etc/asterisk/openai.key && echo "<YOUR_API_KEY_HERE>" > /etc/asterisk/openai.key]]>
+   Generates OpenAI TTS announcements and routes calls after playback.
+   Requires FFmpeg and a protected /etc/asterisk/openai.key file (mode 0640).
+   See README.md for installation and test instructions.]]>
   </description>
   <database/>
   <depends>
     <version>17.0.1</version>
-    <module>recordings ge 17.0.1</module>
+    <module>core ge 17.0.1</module>
   </depends>
 
   <destinations>
-    <!-- nazwa funkcji w functions.inc.php -->
+    <!-- Destination provider in functions.inc.php -->
     <announcementtts>announcementtts_destinations</announcementtts>
   </destinations>
 
   <menuitems>
-    <!-- klucz menu: announcementtts -->
+    <!-- Menu key: announcementtts -->
     <announcementtts needsenginedb="yes">Announcements TTS</announcementtts>
   </menuitems>
 

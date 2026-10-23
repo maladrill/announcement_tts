@@ -1,50 +1,82 @@
+# Announcements TTS for FreePBX 17
+
+Generate OpenAI TTS recordings, play them in Asterisk, and route calls to a selected FreePBX destination. Generation happens when configuration is saved, outside the call path. Playing existing recordings does not require API access.
+
+## Requirements
+
+- FreePBX 17, PHP 8.2 or 8.3, MariaDB/InnoDB.
+- PHP extensions: `curl`, `mbstring`, `pdo_mysql`; available `proc_open`.
+- FFmpeg at `/usr/bin/ffmpeg`.
+- `ASTVARLIBDIR/sounds/custom` writable by the FreePBX/Asterisk service user.
+- HTTPS access to `api.openai.com` and a working system CA certificate store.
+
+Example preparation on Debian 12, as root:
+
+```bash
+apt-get update
+apt-get install --no-install-recommends ffmpeg php8.2-curl php8.2-mbstring
+
+# Create the file only when it does not already exist.
+if [ ! -e /etc/asterisk/openai.key ]; then
+    install -o root -g asterisk -m 0640 /dev/null /etc/asterisk/openai.key
+fi
+chown root:asterisk /etc/asterisk/openai.key
+chmod 0640 /etc/asterisk/openai.key
 ```
- ______             _____  ______   __
-|  ____|           |  __ \|  _ \ \ / /
-| |__ _ __ ___  ___| |__) | |_) \ V /
-|  __| '__/ _ \/ _ \  ___/|  _ < > <
-| |  | | |  __/  __/ |    | |_) / . \
-|_|  |_|  \___|\___|_|    |____/_/ \_\
-Your Open Source Asterisk PBX GUI Solution
+
+Enter the API key into `/etc/asterisk/openai.key` using an editor running as root. The file must contain only the key. Keep credentials out of shell command lines, repositories and issue reports. The module does not include the key in backups. Limit the API account to the required service and configure an appropriate spending limit.
+
+Upload the archive through **Admin → Module Admin → Upload Modules**, then install or upgrade `announcementtts`. Run the standard `fwconsole chown` if directories were created by root.
+
+## Usage
+
+1. Open **Applications → Announcements TTS**.
+2. Enter a unique description of up to 50 characters and announcement text of up to 4096 characters.
+3. Select a voice supported by `tts-1` and the destination after playback.
+4. Save, then select **Apply Config** after successful generation.
+5. The edit form provides a WAV preview and an explicit regeneration option.
+
+**Empty or whitespace-only text intentionally disables playback.** It is stored as empty text with no audio file reference. Saving it makes no API call and creates no placeholder WAV, even when regeneration is selected. After Apply Config, the announcement routes directly to its destination without `Playback()`, `Answer()` or `Wait()`, preserving the channel's answer state. Clearing previously populated text disables the old recording after the configuration is applied. Entering text again generates new audio.
+
+The language field is metadata. Speech follows the language of the entered text; this setting does not translate text or force the language through an API parameter.
+
+Supported voices: `alloy`, `ash`, `coral`, `echo`, `fable`, `nova`, `onyx`, `sage`, `shimmer`. The existing `tts-1` model and Speech API workflow are retained; check the provider's current API lifecycle before a future migration.
+
+## Failure handling and security
+
+- Failed generation creates no incomplete record and preserves the previous text, destination and audio reference.
+- A failed operation can be retried. Saving unchanged nonempty text also regenerates a missing file.
+- Audio is verified as WAV PCM 16-bit, mono, 8000 Hz, then published under a unique filename using atomic `rename()`.
+- One save, generation or restore operation can run at a time. A concurrent request receives a busy error.
+- GUI mutations require POST and a session token; audio previews require module access.
+- User descriptions do not become dialplan code. Destinations are validated server-side.
+- Announcement contents and provider error response bodies are not written to module logs.
+
+Retired WAV files are deliberately retained after a change or deletion: the loaded dialplan and calls already in progress may still use an earlier version. The module does not delete them automatically. Module backups include current audio referenced by the database. Account for retired audio in disk retention procedures; do not delete it before a successful reload and completion of active calls.
+
+## Backup and restore
+
+Backups contain every announcement field and its current WAV. Restore preserves IDs and relocates audio to the destination system's `ASTVARLIBDIR`. Intentionally empty announcements require no WAV and produce no missing-audio warning. Stale audio references in their backups are ignored.
+
+Older 17.0.2 backups contain configuration only. For nonempty text, restore reports missing audio and it must be explicitly regenerated. Restore never issues paid API requests.
+
+## GraphQL
+
+Required scopes: `gql:announcementtts:read` and/or `gql:announcementtts:write`.
+
+- `addAnnouncementtts`: `description`, `text`, `post_dest`; optional `language`, `voice`.
+- `updateAnnouncementtts`: the same fields plus `announcementtts_id`; optional `regenerate`.
+- `removeAnnouncementtts`: numeric `id`.
+- Queries: `announcementtts(id: ...)`, `allAnnouncementstts`.
+
+The `text` field must be supplied, but an empty string is valid and disables playback. ID arguments use the numeric `announcementtts_id`, not the encoded Relay `id`. Fields inherited from the conventional recording module (`recording_id`, `allow_skip`, `return_ivr`, `noanswer`, `repeat_msg`) are not supported. GraphQL changes mark the FreePBX configuration as needing a reload.
+
+## Tests
+
+```bash
+php tests/run.php
 ```
-### What?
-Announcement OpenAI TTS - it doesnt replace the TTS module.
-Plays back one of the system recordings generated by openAI from your text and then goes to another destination.
 
-### How to use it?
-Obtain OpenAI API key from https://platform.openai.com/settings/organization/api-keys - it is something like this: sk-proj-and4lotOfNum8ers8letters
+Tests require `pdo_sqlite`, `mbstring` and FFmpeg. They use a temporary SQLite database and FreePBX/API doubles; no API key or OpenAI requests are needed. CI runs the checks on PHP 8.2 and 8.3.
 
-Log into to your FreePBX shell and create file containing your key in /etc/asterisk/openai.key  
- 
-### For example:
-In the Linux shell paste the below command (don't forget to add your openAI  key):
-
-`touch /etc/asterisk/openai.key & echo "-<YOUR_API_KEY_HERE>" > /etc/asterisk/openai.key`
-
-Then go to: Admin -> Module Admin -> Upload and choose Download (From Web) and paste this link: https://github.com/maladrill/announcement_tts/archive/refs/heads/main.zip 
-
-Then click Manage Local Modules and find Anouncements TTS and chose Install and then Process. 
-![Announcement TTS Screenshot](screenshot.png)
-
-### TODO
-Fix the playback of the recording - it doesn't work
-Add config page in Settings to hold OpenAI API key
-
-### Issues
-Please file bug reports at https://github.com/maladrill/announcement_tts/issues
-
-### Copyright SQS Polska: 
-https://sqspolska.pl
-
-### FreePBX
-
-(http://www.freepbx.org/ "FreePBX Home Page") is an open source GUI (graphical user interface) that controls and manages [Asterisk©](http://www.asterisk.org/ "Asterisk Home Page") (PBX). FreePBX is licensed under GPL.
-[FreePBX](http://www.freepbx.org/ "FreePBX Home Page") is a completely modular GUI for Asterisk written in PHP and Javascript. Meaning you can easily write any module you can think of and distribute it free of cost to your clients so that they can take advantage of beneficial features in [Asterisk](http://www.asterisk.org/ "Asterisk Home Page")
-
-### Setting up a FreePBX system
-[See our WIKI](http://wiki.freepbx.org/display/FOP/Install+FreePBX)
-### License
-[This modules code is licensed as GPLv3+](http://www.gnu.org/licenses/gpl-3.0.txt)
-### Contributing
-To contribute code or modules back into the [FreePBX](http://www.freepbx.org/ "FreePBX Home Page") ecosystem you must fully read our Code License Agreement. We are not able to look at or accept patches or code of any kind until this document is filled out. Please take a look at [http://wiki.freepbx.org/display/DC/Code+License+Agreement](http://wiki.freepbx.org/display/DC/Code+License+Agreement) for more information
-
+See [TESTING.md](TESTING.md) for tests against a real PBX, MariaDB and the GraphQL library. License: GPLv3+; see [LICENSE](LICENSE).

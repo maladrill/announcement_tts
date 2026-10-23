@@ -21,16 +21,15 @@ function checkAnnouncementtts(theForm) {
   return true;
 }
 
-$("#announcegrid-side").on('click-row.bs.table',function(e,row,elem){
+$(document).on('click-row.bs.table', '#announcegrid-side', function(e,row,elem){
 	window.location = '?display=announcementtts&view=form&extdisplay='+row['announcementtts_id'];
 });
 
 
 
 function actionformatter(v,r){
-  var html = '<a href="?display=announcementtts&view=form&extdisplay='+v+'"><i class="fa fa-edit"></i></a>';
-      html += '<a href="?display=announcementtts&action=delete&extdisplay='+v+'" class="delAction"><i class="fa fa-trash"></i></a>';
-  return html;
+  if (!/^[1-9][0-9]*$/.test(String(v))) { return ''; }
+  return '<a href="?display=announcementtts&amp;view=form&amp;extdisplay='+v+'"><i class="fa fa-edit"></i></a>';
 }
 function aDestFormatter(value){
 	if(value === null || value.length == 0){
@@ -38,12 +37,12 @@ function aDestFormatter(value){
 	}else{
 		if(typeof destinations[value] !== "undefined") {
 			if(typeof destinations[value].edit_url !== "undefined" && destinations[value].edit_url !== false) {
-				return '<a href="' + destinations[value].edit_url + '">' + destinations[value].name + ": " + destinations[value].description + '</a>';
+				return $('<span>').text(destinations[value].name + ": " + destinations[value].description).prop('outerHTML');
 			} else {
-				return destinations[value].name + ": " + destinations[value].description;
+				return $('<span>').text(destinations[value].name + ": " + destinations[value].description).prop('outerHTML');
 			}
 		} else {
-			return value;
+			return $('<span>').text(value).prop('outerHTML');
 		}
 	}
 }
