@@ -80,3 +80,5 @@ php tests/run.php
 Tests require `pdo_sqlite`, `mbstring` and FFmpeg. They use a temporary SQLite database and FreePBX/API doubles; no API key or OpenAI requests are needed. CI runs the checks on PHP 8.2 and 8.3.
 
 See [TESTING.md](TESTING.md) for tests against a real PBX, MariaDB and the GraphQL library. License: GPLv3+; see [LICENSE](LICENSE).
+
+The CI installation test additionally executes `install.php` against an isolated MariaDB schema and verifies subsequent FreePBX-style module registration. Installer variables are scoped inside a closure to preserve FreePBX's legacy global database wrapper and its escaping contract.

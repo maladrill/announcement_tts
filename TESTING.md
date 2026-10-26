@@ -1,4 +1,4 @@
-# Integration tests for 17.0.4
+# Integration tests for 17.0.5
 
 ## Preparation
 
@@ -6,13 +6,14 @@ Use an isolated FreePBX 17 PBX on Debian 12/PHP 8.2. Take a VM/CT snapshot befor
 
 1. Install prerequisites and prepare the protected key file as described in README.md.
 2. Install the `fix/freepbx17-tts-reliability` branch through Module Admin. Archive: `https://github.com/maladrill/announcement_tts/archive/refs/heads/fix/freepbx17-tts-reliability.zip`.
-3. Run `fwconsole chown`, then `fwconsole reload`. Confirm version 17.0.4 in Module Admin.
+3. Run `fwconsole chown`, then `fwconsole reload`. Confirm version 17.0.5 in Module Admin.
 4. Prepare a test extension and an inbound route to the announcement. Restrict PBX administration to the management network.
 
 ## Scenarios
 
 | Test | Expected result |
 | --- | --- |
+| Fresh installation or retry after the 17.0.4 registration failure | Module Admin completes registration without SQLSTATE 42000 / 1064; existing announcement rows are preserved. |
 | New Polish announcement with `fable` | Save succeeds, preview plays valid WAV, and after Apply Config a call hears the full recording and reaches the selected extension. |
 | Change description/destination only | No additional TTS request; the new destination is used after Apply Config. |
 | Change text or voice | A new file and database reference; the previous WAV remains available to the loaded dialplan. |
@@ -83,6 +84,8 @@ mutation {
 Use the returned numeric ID for `updateAnnouncementtts` and `removeAnnouncementtts`. Verify the returned update ID, destination changes, reload notification and deletion. Repeat create/update using `text: ""`; it must save without a provider call, including with `regenerate: true`. Operations must be unavailable without the appropriate scope. Also verify resolving `app-announcementtts-ID,s,1` through `destinationConnection`.
 
 ## Results to report
+
+CI also runs `php tests/install.php` against an isolated MariaDB schema on PHP 8.2 and 8.3. It reproduces the legacy database-wrapper replacement failure, then verifies fresh installation, migration from MyISAM, version registration and repeated installation. These tests use Unix-socket authentication and refuse to modify any schema except `announcementtts_install_test`.
 
 Include FreePBX, PHP, Asterisk and FFmpeg versions, the branch commit and results for each scenario. For failures, include the timestamp, record ID and a redacted log excerpt. Never send API keys, tokens, confidential announcement contents or customer information.
 
