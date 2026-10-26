@@ -51,13 +51,14 @@ class Service {
             'description' => self::field($data['description'] ?? null, 'description', 50),
             'text' => self::field($data['text'] ?? null, 'announcement text', 4096, true),
             'language' => self::field($data['language'] ?? 'pl', 'language', 10),
-            'voice' => self::field($data['voice'] ?? 'fable', 'voice', 20),
+            'backend' => self::field($data['backend'] ?? 'realtime', 'TTS engine', 20),
+            'voice' => self::field($data['voice'] ?? TtsGenerator::defaultVoice($data['backend'] ?? 'realtime'), 'voice', 20),
             'post_dest' => self::destination($data['post_dest'] ?? null),
         ];
         // Empty and whitespace-only text explicitly disable playback.
         if (self::isSilent($row['text'])) { $row['text'] = ''; }
         if (!in_array($row['language'], self::LANGUAGES, true)) { throw new \InvalidArgumentException('Unsupported language.'); }
-        if (!in_array($row['voice'], TtsGenerator::VOICES, true)) { throw new \InvalidArgumentException('Unsupported voice for tts-1.'); }
+        if (!in_array($row['voice'], TtsGenerator::voices($row['backend']), true)) { throw new \InvalidArgumentException('Unsupported voice for selected TTS engine.'); }
         if ($registered && !in_array($row['post_dest'], ($this->destinations)(), true)) {
             throw new \InvalidArgumentException('The selected destination no longer exists.');
         }
@@ -65,7 +66,7 @@ class Service {
     }
 
     public function all(): array {
-        return $this->db->query('SELECT announcementtts_id, description, post_dest, `text`, language, voice, audio_file FROM announcementtts ORDER BY announcementtts_id')->fetchAll(\PDO::FETCH_ASSOC);
+        return $this->db->query('SELECT announcementtts_id, description, post_dest, `text`, language, voice, backend, audio_file FROM announcementtts ORDER BY announcementtts_id')->fetchAll(\PDO::FETCH_ASSOC);
     }
 
     public function get($id): array {
@@ -93,10 +94,15 @@ class Service {
     }
 
     public function save(?int $id, array $data, bool $regenerate = false): int {
-        $data = $this->validate($data);
         return $this->withLock(function () use ($id, $data, $regenerate): int {
             $old = $id === null ? [] : $this->get($id);
             if ($id !== null && !$old) { throw new \InvalidArgumentException('Announcement does not exist.'); }
+            // Resolve omitted editing options under the same lock as generation and persistence.
+            if ($old) {
+                $data['backend'] = $data['backend'] ?? $old['backend'];
+                if (!isset($data['voice']) && $data['backend'] === $old['backend']) { $data['voice'] = $old['voice']; }
+            }
+            $data = $this->validate($data);
             if ($id !== null && $data['post_dest'] === 'app-announcementtts-' . $id . ',s,1') {
                 throw new \InvalidArgumentException('An announcement cannot route directly to itself.');
             }
@@ -105,11 +111,11 @@ class Service {
             if ($stmt->fetchColumn() !== false) { throw new \InvalidArgumentException('Announcement description already exists.'); }
             $silent = $data['text'] === '';
             $changed = !$old || $regenerate || !$this->audioPath($old['audio_file'] ?? '');
-            foreach (['text', 'language', 'voice'] as $key) { $changed = $changed || ($old[$key] ?? null) !== $data[$key]; }
+            foreach (['text', 'language', 'voice', 'backend'] as $key) { $changed = $changed || ($old[$key] ?? null) !== $data[$key]; }
             $newPath = null;
             try {
                 if (!$silent && $changed) {
-                    $name = ($this->generate)($data['text'], $data['voice'], $this->directory);
+                    $name = ($this->generate)($data['text'], $data['voice'], $this->directory, $data['backend']);
                     $newPath = $this->audioPath($this->directory . '/' . $name);
                     if ($newPath === null) { throw new \RuntimeException('Generator did not publish valid module audio.'); }
                     TtsGenerator::assertWav($newPath);
@@ -117,9 +123,9 @@ class Service {
                 $data['audio_file'] = $silent ? null : ($newPath ?? $old['audio_file']);
                 $this->db->beginTransaction();
                 if ($id === null) {
-                    $stmt = $this->db->prepare('INSERT INTO announcementtts (description, `text`, language, voice, post_dest, audio_file) VALUES (:description, :text, :language, :voice, :post_dest, :audio_file)');
+                    $stmt = $this->db->prepare('INSERT INTO announcementtts (description, `text`, language, voice, backend, post_dest, audio_file) VALUES (:description, :text, :language, :voice, :backend, :post_dest, :audio_file)');
                 } else {
-                    $stmt = $this->db->prepare('UPDATE announcementtts SET description=:description, `text`=:text, language=:language, voice=:voice, post_dest=:post_dest, audio_file=:audio_file WHERE announcementtts_id=:id');
+                    $stmt = $this->db->prepare('UPDATE announcementtts SET description=:description, `text`=:text, language=:language, voice=:voice, backend=:backend, post_dest=:post_dest, audio_file=:audio_file WHERE announcementtts_id=:id');
                     $data['id'] = $id;
                 }
                 $stmt->execute($data);
@@ -175,6 +181,7 @@ class Service {
                     $id = self::id($row['announcementtts_id'] ?? null);
                     if (isset($prepared[$id])) { throw new \InvalidArgumentException('Duplicate announcement ID in backup.'); }
                     // Destinations can be restored before their dependent modules are available.
+                    $row['backend'] = $row['backend'] ?? 'tts-1';
                     $data = $this->validate($row, false);
                     $data['announcementtts_id'] = $id;
                     $data['audio_file'] = null;
@@ -200,7 +207,7 @@ class Service {
                 }
                 $this->db->beginTransaction();
                 $this->db->exec('DELETE FROM announcementtts');
-                $stmt = $this->db->prepare('INSERT INTO announcementtts (announcementtts_id, description, `text`, language, voice, post_dest, audio_file) VALUES (:announcementtts_id, :description, :text, :language, :voice, :post_dest, :audio_file)');
+                $stmt = $this->db->prepare('INSERT INTO announcementtts (announcementtts_id, description, `text`, language, voice, backend, post_dest, audio_file) VALUES (:announcementtts_id, :description, :text, :language, :voice, :backend, :post_dest, :audio_file)');
                 foreach ($prepared as $data) { $stmt->execute($data); }
                 $this->db->commit();
                 return $missing;

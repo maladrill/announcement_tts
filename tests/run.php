@@ -40,19 +40,21 @@ register_shutdown_function(static function () use ($root): void {
     rmdir($root);
 });
 $db = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-$db->exec('CREATE TABLE announcementtts (announcementtts_id INTEGER PRIMARY KEY AUTOINCREMENT, description TEXT, text TEXT, language TEXT, voice TEXT, audio_file TEXT, post_dest TEXT)');
+$db->exec('CREATE TABLE announcementtts (announcementtts_id INTEGER PRIMARY KEY AUTOINCREMENT, description TEXT, text TEXT, language TEXT, voice TEXT, backend TEXT, audio_file TEXT, post_dest TEXT)');
 $calls = 0;
 $broken = false;
+$generatedBackend = null;
 $destinations = ['app-blackhole,hangup,1', 'ext-local,100,1', 'app-announcementtts-1,s,1'];
-$generate = function ($text, $voice, $dir) use (&$calls, &$broken): string {
+$generate = function ($text, $voice, $dir, $backend = 'tts-1') use (&$calls, &$broken, &$generatedBackend): string {
     $calls++;
+    $generatedBackend = $backend;
     if ($broken) { throw new RuntimeException('Mock provider failure.'); }
     $name = 'announcementtts_' . bin2hex(random_bytes(16)) . '.wav';
     wav($dir . '/' . $name);
     return $name;
 };
 $service = new Service($db, $root, static fn() => $destinations, $generate);
-$data = ['description' => 'Zażółć', 'text' => 'Dzień dobry.', 'language' => 'pl', 'voice' => 'fable', 'post_dest' => 'app-blackhole,hangup,1'];
+$data = ['description' => 'Zażółć', 'text' => 'Dzień dobry.', 'language' => 'pl', 'voice' => 'fable', 'backend' => 'tts-1', 'post_dest' => 'app-blackhole,hangup,1'];
 
 foreach ([0, -1, '1 OR 1=1', '1.0', [], true, null, '99999999999999999999999'] as $id) {
     fails(static fn() => Service::id($id), 'Reject malformed ID ' . json_encode($id));
@@ -134,6 +136,8 @@ if (is_executable('/usr/bin/ffmpeg')) {
     check(glob($root . '/.announcementtts-input-*') === [] && glob($root . '/.announcementtts-output-*') === [], 'Generation cleans temporary files on success and failure');
 }
 
+require __DIR__ . '/backends.php';
+require __DIR__ . '/realtime.php';
 require __DIR__ . '/adapters.php';
 check($service->get($id) !== [], 'Adapter tests completed');
 $path = $service->get($id)['audio_file'];

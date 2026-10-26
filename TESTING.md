@@ -1,4 +1,4 @@
-# Integration tests for 17.0.8
+# Integration tests for 17.0.9
 
 ## Preparation
 
@@ -6,7 +6,7 @@ Use an isolated FreePBX 17 PBX on Debian 12/PHP 8.2. Take a VM/CT snapshot befor
 
 1. Install prerequisites and prepare the protected key file as described in README.md.
 2. Install the `fix/freepbx17-tts-reliability` branch through Module Admin. Archive: `https://github.com/maladrill/announcement_tts/archive/refs/heads/fix/freepbx17-tts-reliability.zip`.
-3. Run `fwconsole chown`, then `fwconsole reload`. Confirm version 17.0.8 in Module Admin.
+3. Run `fwconsole chown`, then `fwconsole reload`. Confirm version 17.0.9 in Module Admin.
 4. Prepare a test extension and an inbound route to the announcement. Restrict PBX administration to the management network.
 
 ## Scenarios
@@ -16,8 +16,16 @@ Use an isolated FreePBX 17 PBX on Debian 12/PHP 8.2. Take a VM/CT snapshot befor
 | Module landing page, then Add (`?display=announcementtts&view=form`) | The empty add form opens without an ID; FreePBX's `extdisplay=false` sentinel must not trigger an invalid-ID exception. |
 | Edit with a malformed or nonexistent ID | A handled error message; no uncaught exception and no database change. |
 | Fresh installation or retry after the 17.0.4 registration failure | Module Admin completes registration without SQLSTATE 42000 / 1064; existing announcement rows are preserved. |
-| New Polish announcement with `fable` | Save succeeds, preview plays valid WAV, and after Apply Config a call hears the full recording and reaches the selected extension. |
+| New Polish announcement with tts-1 / `fable` | Save succeeds, preview plays valid WAV, and after Apply Config a call hears the full recording and reaches the selected extension. |
 | Change description/destination only | No additional TTS request; the new destination is used after Apply Config. |
+| New record engine selector | Above Language, with Realtime API selected and Marin as the default voice. |
+| New Polish announcement with Realtime API / `marin`, then `cedar` | Both saves create valid local WAV files. Preview the entire recording for verbatim text, numbers and abbreviations; after Apply Config calls play locally without API access. |
+| Switch tts-1 / Realtime API before saving | Voice options update immediately. Fable/Nova/Onyx appear only for tts-1; Ballad/Verse/Marin/Cedar only for Realtime. Shared voices stay selected; incompatible voices switch to the engine default. No API request is made until Save. |
+| Switch engine with shared voice Alloy and unchanged text | Save still generates a replacement WAV. |
+| Reset after switching engine | The saved/default engine and corresponding original voice return together. |
+| Upgrade existing tts-1 records | Their engine, voice, text and audio remain unchanged, with no generation requests. |
+| Realtime model unavailable, quota exhausted, blocked WebSocket or incomplete response | Visible error, original engine/text/voice/audio preserved; retry after resolving the problem. No automatic fallback or second provider request. |
+| Empty text with either engine, including engine switches | No API request or WAV; the call routes directly to the selected destination. |
 | Change text or voice | A new file and database reference; the previous WAV remains available to the loaded dialplan. |
 | Explicit regeneration | A new file even with identical nonempty text. |
 | Refresh after successful save | POST redirects to the list; refresh does not repeat generation. |
@@ -60,10 +68,10 @@ Use the actual database file path; newly generated filenames have a random suffi
 
 ## Backup/restore
 
-1. Create two audible announcements with different texts/destinations and a third with empty text.
+1. Create two audible announcements using different engines, voices, texts and destinations and a third with empty text.
 2. Run a FreePBX Backup job including Announcements TTS.
 3. Restore to another isolated TEST PBX with the destination modules installed. The API key is not needed to restore or play existing audio, or to route an intentionally empty announcement.
-4. Verify IDs, text, language, voice, destinations and both recordings. Run Apply Config and place calls through all three announcements. The empty announcement must produce no missing-audio warning.
+4. Verify IDs, text, language, engine, voice, destinations and both recordings. Run Apply Config and place calls through all three announcements. The empty announcement must produce no missing-audio warning.
 5. A 17.0.2 configuration-only backup should warn about missing files for nonempty text; generating them requires an explicit save and a key.
 
 ## GraphQL
@@ -76,15 +84,20 @@ mutation {
     description: "GraphQL test"
     text: "This is a test announcement."
     language: "en"
-    voice: "fable"
+    backend: "realtime"
+    voice: "marin"
     post_dest: "app-blackhole,hangup,1"
   }) {
-    announcementtts { announcementtts_id description text language voice post_dest }
+    announcementtts { announcementtts_id description text language backend voice post_dest }
   }
 }
 ```
 
 Use the returned numeric ID for `updateAnnouncementtts` and `removeAnnouncementtts`. Verify the returned update ID, destination changes, reload notification and deletion. Repeat create/update using `text: ""`; it must save without a provider call, including with `regenerate: true`. Operations must be unavailable without the appropriate scope. Also verify resolving `app-announcementtts-ID,s,1` through `destinationConnection`.
+
+## Realtime offline checks and live validation
+
+The automated suite uses provider fixtures and Unix socket pairs, never API credentials. It covers GA response events, exact source text and chosen voice in the request, PCM chunk order, response status, disconnects, malformed payloads, deadline/size limits, WebSocket masking/fragmentation/ping handling, engine-specific form rendering and real FFmpeg conversion. These checks do not establish live project access, proxy compatibility or pronunciation. Complete both engine scenarios on the PBX with the real protected key before merging.
 
 ## Results to report
 

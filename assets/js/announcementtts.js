@@ -70,3 +70,31 @@ function aDestFormatter(value){
 		}
 	}
 }
+
+// Keep the current voice when supported by both engines, otherwise select the engine's default.
+function announcementttsUpdateVoices(preferred) {
+    var engine = document.getElementById('backend');
+    var voice = document.getElementById('voice');
+    if (!engine || !voice || typeof announcementttsVoices === 'undefined') { return; }
+    var config = announcementttsVoices[engine.value];
+    if (!config) { return; }
+    var candidate = typeof preferred === 'string' ? preferred : voice.value;
+    var selected = config.voices.indexOf(candidate) !== -1 ? candidate : config.defaultVoice;
+    while (voice.firstChild) { voice.removeChild(voice.firstChild); }
+    config.voices.forEach(function (name) {
+        var option = document.createElement('option');
+        option.value = name;
+        option.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+        option.selected = name === selected;
+        voice.appendChild(option);
+    });
+    voice.value = selected;
+}
+$(document).on('change', '#backend', announcementttsUpdateVoices);
+// Native reset restores server defaults after the event handler returns.
+$(document).on('reset', 'form[name="editAnnouncementtts"]', function () {
+    setTimeout(function () {
+        var voice = document.getElementById('voice');
+        announcementttsUpdateVoices(voice ? voice.getAttribute('data-initial-voice') : undefined);
+    }, 0);
+});

@@ -2,11 +2,13 @@
   <rawname>announcementtts</rawname>
   <repo>unsupported</repo>
   <name>Announcements TTS</name>
-  <version>17.0.8</version>
+  <version>17.0.9</version>
   <publisher>SQS Polska</publisher>
   <license>GPLv3+</license>
   <licenselink>http://www.gnu.org/licenses/gpl-3.0.txt</licenselink>
   <changelog>
+    Add engine selection above Language with Realtime API as the default for new announcements.
+    Switch voice options per engine, generate Realtime audio via WebSocket and preserve legacy tts-1 records.
     Fix transactional TTS saves, audio preview, backups, GraphQL and dialplan input handling.
     Empty text skips playback and routes directly to the selected destination.
     Isolate installer variables to preserve FreePBX database escaping during module registration.

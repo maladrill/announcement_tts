@@ -1,8 +1,23 @@
 <?php
 namespace FreePBX\modules\Announcementtts;
+require_once __DIR__ . "/RealtimeSpeech.php";
 
 class TtsGenerator {
     public const VOICES = ['alloy', 'ash', 'coral', 'echo', 'fable', 'nova', 'onyx', 'sage', 'shimmer'];
+    public const REALTIME_VOICES = ['alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse', 'marin', 'cedar'];
+    public const ENGINES = ['tts-1' => 'tts-1', 'realtime' => 'Realtime API'];
+
+    public static function voices(string $backend): array {
+        return match ($backend) {
+            'tts-1' => self::VOICES,
+            'realtime' => self::REALTIME_VOICES,
+            default => throw new \InvalidArgumentException('Unsupported TTS engine.'),
+        };
+    }
+    public static function defaultVoice(string $backend): string {
+        self::voices($backend);
+        return $backend === 'realtime' ? 'marin' : 'fable';
+    }
     private const MAX_AUDIO_BYTES = 16777216;
 
     public function __construct(
@@ -10,7 +25,8 @@ class TtsGenerator {
         private string $ffmpeg = '/usr/bin/ffmpeg'
     ) {}
 
-    public function generate(string $text, string $voice, string $directory): string {
+    public function generate(string $text, string $voice, string $directory, string $backend = 'tts-1'): string {
+        if (!in_array($voice, self::voices($backend), true)) { throw new \InvalidArgumentException('Unsupported voice for selected TTS engine.'); }
         if (!is_executable($this->ffmpeg)) {
             throw new \RuntimeException('FFmpeg is not installed or executable: ' . $this->ffmpeg);
         }
@@ -22,7 +38,8 @@ class TtsGenerator {
             throw new \RuntimeException('Unable to create temporary audio files.');
         }
         try {
-            $this->request($text, $voice, $input);
+            if ($backend === 'realtime') { $this->requestRealtime($text, $voice, $input); }
+            else { $this->request($text, $voice, $input); }
             $this->convert($input, $output);
             self::assertWav($output);
             $name = 'announcementtts_' . bin2hex(random_bytes(16)) . '.wav';
@@ -36,7 +53,7 @@ class TtsGenerator {
         }
     }
 
-    protected function request(string $text, string $voice, string $output): void {
+    private function key(): string {
         if (!is_readable($this->keyFile)) {
             throw new \RuntimeException('OpenAI key file is missing or unreadable.');
         }
@@ -47,6 +64,15 @@ class TtsGenerator {
         if ($key === '' || preg_match('/[\x00-\x20\x7f]/', $key)) {
             throw new \RuntimeException('OpenAI key file is empty or invalid.');
         }
+        return $key;
+    }
+
+    protected function requestRealtime(string $text, string $voice, string $output): void {
+        (new RealtimeSpeech())->request($this->key(), $text, $voice, $output);
+    }
+
+    protected function request(string $text, string $voice, string $output): void {
+        $key = $this->key();
         $file = fopen($output, 'wb');
         if ($file === false) { throw new \RuntimeException('Unable to open temporary audio file.'); }
         $ch = curl_init('https://api.openai.com/v1/audio/speech');

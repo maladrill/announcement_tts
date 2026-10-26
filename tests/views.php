@@ -52,6 +52,11 @@ try {
         check(preg_match('/name="announcementtts_id"\s+value=""/', $html) === 1 && !str_contains($html, 'btn-danger'),
             'Add page has an empty record ID and no delete action: ' . json_encode($absent));
     }
+    check(preg_match('/<option value="realtime" selected>Realtime API<\/option>/', $html) === 1
+        && strpos($html, 'id="backend"') < strpos($html, 'id="language"'), 'New forms default to Realtime API above the language selector');
+    preg_match('/<select id="voice"[^>]*>(.*?)<\/select>/s', $html, $voiceSelect);
+    check(str_contains($voiceSelect[1], 'value="marin" selected') && str_contains($voiceSelect[1], 'value="cedar"')
+        && !str_contains($voiceSelect[1], 'value="fable"'), 'New form renders only Realtime voices with Marin selected');
     check($fpbx->View->requests === [], 'Add page never looks up usage for an absent record ID');
     $html = $renderPage(['display' => 'announcementtts', 'extdisplay' => false]);
     check(str_contains($html, 'id="table-all"'), 'Module landing page renders its list with the FreePBX false sentinel');
@@ -70,6 +75,7 @@ try {
         $html = $renderPage(array_replace($baseRequest, ['extdisplay' => $existingId]));
         check(preg_match('/name="action"\s+value="edit"/', $html) === 1 && str_contains($html, 'name="announcementtts_id" value="' . $id . '"'),
             'Edit page renders for a valid existing ID: ' . json_encode($existingId));
+        check(str_contains($html, '<option value="tts-1" selected>tts-1</option>') && str_contains($html, 'value="fable" selected'), 'Editing a legacy record preserves its engine and voice');
         check(str_contains($html, '<audio controls') && str_contains($html, 'btn-danger'), 'Edit page includes the stored audio preview and delete form');
     }
     $html = $renderPage(array_replace($baseRequest, ['extdisplay' => '999999']));

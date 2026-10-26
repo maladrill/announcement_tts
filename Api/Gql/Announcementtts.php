@@ -12,8 +12,8 @@ class Announcementtts extends Base {
         $fields = [];
         if ($update) { $fields['announcementtts_id'] = ['type' => Type::nonNull(Type::id())]; }
         foreach (['description', 'text', 'post_dest'] as $name) { $fields[$name] = ['type' => Type::nonNull(Type::string())]; }
-        foreach (['language' => 'pl', 'voice' => 'fable'] as $name => $default) {
-            $fields[$name] = ['type' => Type::string(), 'defaultValue' => $default];
+        foreach (['language', 'voice', 'backend'] as $name) {
+            $fields[$name] = ['type' => Type::string()];
         }
         if ($update) { $fields['regenerate'] = ['type' => Type::boolean(), 'defaultValue' => false]; }
         return $fields;
@@ -33,10 +33,10 @@ class Announcementtts extends Base {
                         $module = $this->freepbx->Announcementtts;
                         if ($update) {
                             $id = $module->editAnnouncementtts($input['announcementtts_id'], $input['description'], $input['post_dest'],
-                                $input['text'], $input['language'] ?? 'pl', $input['voice'] ?? 'fable', $input['regenerate'] ?? false);
+                                $input['text'], $input['language'] ?? 'pl', $input['voice'] ?? null, $input['regenerate'] ?? false, $input['backend'] ?? null);
                         } else {
                             $id = $module->addAnnouncementtts($input['description'], $input['post_dest'], $input['text'],
-                                $input['language'] ?? 'pl', $input['voice'] ?? 'fable');
+                                $input['language'] ?? 'pl', $input['voice'] ?? null, $input['backend'] ?? 'realtime');
                         }
                         return $module->getAnnouncementttsByID($id);
                     },
@@ -98,7 +98,7 @@ class Announcementtts extends Base {
                     'resolve' => fn($r) => $this->typeContainer->get('destination')->resolveValue($r['post_dest']),
                 ],
             ];
-            foreach (['description', 'text', 'language', 'voice', 'post_dest'] as $name) { $fields[$name] = ['type' => Type::string()]; }
+            foreach (['description', 'text', 'language', 'voice', 'backend', 'post_dest'] as $name) { $fields[$name] = ['type' => Type::string()]; }
             return $fields;
         });
         $type->setConnectionResolveNode(static fn($edge) => $edge['node']);

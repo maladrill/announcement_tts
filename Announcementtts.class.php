@@ -25,13 +25,13 @@ class Announcementtts extends \FreePBX_Helpers implements \BMO {
         $id = $id ? Service::id($id) : null;
         return array_values(array_column(array_filter($this->getAnnouncementstts(), static fn($r) => $id === null || (int) $r['announcementtts_id'] !== $id), 'description'));
     }
-    public function addAnnouncementtts($description, $post_dest, $text = '', $language = 'pl', $voice = 'fable') {
-        $id = $this->service->save(null, compact('description', 'post_dest', 'text', 'language', 'voice'));
+    public function addAnnouncementtts($description, $post_dest, $text = '', $language = 'pl', $voice = null, $backend = 'realtime') {
+        $id = $this->service->save(null, compact('description', 'post_dest', 'text', 'language', 'voice', 'backend'));
         needreload();
         return $id;
     }
-    public function editAnnouncementtts($id, $description, $post_dest, $text, $language = 'pl', $voice = 'fable', $regenerate = false) {
-        $id = $this->service->save(Service::id($id), compact('description', 'post_dest', 'text', 'language', 'voice'), (bool) $regenerate);
+    public function editAnnouncementtts($id, $description, $post_dest, $text, $language = 'pl', $voice = null, $regenerate = false, $backend = null) {
+        $id = $this->service->save(Service::id($id), compact('description', 'post_dest', 'text', 'language', 'voice', 'backend'), (bool) $regenerate);
         needreload();
         return $id;
     }
@@ -64,9 +64,10 @@ class Announcementtts extends \FreePBX_Helpers implements \BMO {
                 if (!empty($_POST['goto0']) && is_string($_POST['goto0'])) { $post_dest = $_POST[$_POST['goto0'] . '0'] ?? ''; }
                 $text = $_POST['text'] ?? null;
                 $language = $_POST['language'] ?? 'pl';
-                $voice = $_POST['voice'] ?? 'fable';
-                if ($action === 'add') { $this->addAnnouncementtts($description, $post_dest, $text, $language, $voice); }
-                else { $this->editAnnouncementtts($id, $description, $post_dest, $text, $language, $voice, isset($_POST['regenerate'])); }
+                $voice = $_POST['voice'] ?? null;
+                $backend = $_POST['backend'] ?? ($action === 'add' ? 'realtime' : null);
+                if ($action === 'add') { $this->addAnnouncementtts($description, $post_dest, $text, $language, $voice, $backend); }
+                else { $this->editAnnouncementtts($id, $description, $post_dest, $text, $language, $voice, isset($_POST['regenerate']), $backend); }
             }
             $this->formSaved = true;
             // Post/Redirect/Get prevents repeated paid generation on a browser refresh.

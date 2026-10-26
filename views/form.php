@@ -20,7 +20,7 @@ if ($extdisplay !== '' && !$row) {
 }
 // Preserve entered values after a validation/provider failure, without changing saved data.
 if (FreePBX::Announcementtts()->formError() !== null) {
-    foreach (['description', 'text', 'language', 'voice', 'post_dest'] as $field) {
+    foreach (['description', 'text', 'language', 'voice', 'backend', 'post_dest'] as $field) {
         if (isset($_POST[$field]) && is_string($_POST[$field])) { $row[$field] = $_POST[$field]; }
     }
     if (isset($_POST['goto0']) && is_string($_POST['goto0']) && isset($_POST[$_POST['goto0'] . '0']) && is_string($_POST[$_POST['goto0'] . '0'])) {
@@ -33,7 +33,9 @@ $action      = $extdisplay ? 'edit' : 'add';
 $description = $row['description'] ?? '';
 $text        = $row['text']        ?? '';
 $language    = $row['language']    ?? 'pl';
-$voice       = $row['voice']       ?? 'fable';
+$backend     = $row['backend']     ?? ($recordId === null ? 'realtime' : 'tts-1');
+if (!isset(\FreePBX\modules\Announcementtts\TtsGenerator::ENGINES[$backend])) { $backend = 'realtime'; }
+$voice       = $row['voice'] ?? \FreePBX\modules\Announcementtts\TtsGenerator::defaultVoice($backend);
 $post_dest   = $row['post_dest']   ?? '';
 
 // Language and voice options
@@ -46,7 +48,14 @@ $LANGUAGES = [
   'sk'=>'Slovak','sl'=>'Slovenian','es'=>'Spanish','sw'=>'Swahili','sv'=>'Swedish','tl'=>'Tagalog','ta'=>'Tamil','th'=>'Thai','tr'=>'Turkish',
   'uk'=>'Ukrainian','ur'=>'Urdu','vi'=>'Vietnamese','cy'=>'Welsh',
 ];
-$VOICES = \FreePBX\modules\Announcementtts\TtsGenerator::VOICES;
+$VOICES = \FreePBX\modules\Announcementtts\TtsGenerator::voices($backend);
+$voiceConfiguration = [];
+foreach (array_keys(\FreePBX\modules\Announcementtts\TtsGenerator::ENGINES) as $engine) {
+    $voiceConfiguration[$engine] = [
+        'voices' => \FreePBX\modules\Announcementtts\TtsGenerator::voices($engine),
+        'defaultVoice' => \FreePBX\modules\Announcementtts\TtsGenerator::defaultVoice($engine),
+    ];
+}
 ?>
 
 <form class="fpbx-submit"
@@ -96,6 +105,21 @@ $VOICES = \FreePBX\modules\Announcementtts\TtsGenerator::VOICES;
     </div>
   </div>
 
+  <!-- TTS Engine -->
+  <div class="element-container">
+    <div class="form-group row">
+      <div class="col-md-3"><label for="backend" class="control-label"><?php echo _("TTS Engine") ?></label></div>
+      <div class="col-md-9">
+        <select id="backend" name="backend" class="form-control">
+          <?php foreach (\FreePBX\modules\Announcementtts\TtsGenerator::ENGINES as $value => $label): ?>
+          <option value="<?php echo $value ?>"<?php echo $value === $backend ? ' selected' : '' ?>><?php echo $label ?></option>
+          <?php endforeach; ?>
+        </select>
+        <span class="help-block"><?php echo _("Changing the engine regenerates audio when saved. Available voices depend on the selected engine.") ?></span>
+      </div>
+    </div>
+  </div>
+
   <!-- Language -->
   <?php
     $langopts = '';
@@ -134,7 +158,7 @@ $VOICES = \FreePBX\modules\Announcementtts\TtsGenerator::VOICES;
         <i class="fa fa-question-circle fpbx-help-icon" data-for="voice"></i>
       </div>
       <div class="col-md-9">
-        <select id="voice" name="voice" class="form-control"><?php echo $voiceopts ?></select>
+        <select id="voice" name="voice" class="form-control" data-initial-voice="<?php echo htmlspecialchars($voice, ENT_QUOTES, 'UTF-8') ?>"><?php echo $voiceopts ?></select>
         <span id="voice-help" class="help-block fpbx-help-block">
           <?php echo _("Choose the voice model for speech synthesis.") ?>
         </span>
@@ -199,6 +223,7 @@ if (!empty($extdisplay)) {
     $all = array_filter($all, fn($r) => $r['announcementtts_id'] != $extdisplay);
 }
 $existingDescriptions = array_column($all, 'description');
+echo 'var announcementttsVoices = ' . json_encode($voiceConfiguration, JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ';';
 echo 'var announcementttsnames = ' . json_encode($existingDescriptions, JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ';';
 ?>
 </script>

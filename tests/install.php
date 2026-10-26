@@ -99,7 +99,7 @@ try {
     installCheck($connection->query("SELECT version FROM modules WHERE modulename='announcementtts'")->fetchColumn() === $version,
         'FreePBX-style registration succeeds after a fresh installation');
     $fields = $connection->query('SHOW COLUMNS FROM announcementtts')->fetchAll(PDO::FETCH_COLUMN);
-    installCheck(count(array_intersect($fields, ['announcementtts_id', 'description', 'text', 'language', 'voice', 'audio_file', 'post_dest'])) === 7,
+    installCheck(count(array_intersect($fields, ['announcementtts_id', 'description', 'text', 'language', 'voice', 'backend', 'audio_file', 'post_dest'])) === 8,
         'Fresh MariaDB table contains every required announcement field');
     installCheck(is_dir($testRoot . '/sounds/custom'), 'Installer creates the custom sounds directory');
 
@@ -118,11 +118,21 @@ try {
     installCheck($row['description'] === 'Existing announcement' && (int) $row['recording_id'] === 123
         && array_key_exists('text', $row) && array_key_exists('audio_file', $row), 'Upgrade preserves existing data and adds missing TTS fields');
 
+    installCheck($row['backend'] === 'tts-1' && $row['voice'] === 'fable', 'Upgrade preserves the legacy engine and voice without regenerating audio');
+
     $harness->includeScript(dirname(__DIR__) . '/install.php', 'announcementtts');
     $harness->register('announcementtts', $version, true);
     installCheck($connection->query('SELECT COUNT(*) FROM announcementtts')->fetchColumn() == 1,
         'Repeated installation is idempotent and does not lose existing rows');
     installCheck($db === $expectedDb, 'Repeated installation still preserves legacy escaping');
+
+    // Upgrade the immediately preceding TTS schema, including an existing non-default voice/audio.
+    $connection->exec('ALTER TABLE announcementtts DROP COLUMN backend');
+    $connection->exec("UPDATE announcementtts SET `text`='Saved announcement', voice='nova', audio_file='/var/lib/asterisk/sounds/custom/announcementtts_1.wav'");
+    $harness->includeScript(dirname(__DIR__) . '/install.php', 'announcementtts');
+    $row = $connection->query('SELECT * FROM announcementtts')->fetch(PDO::FETCH_ASSOC);
+    installCheck($row['backend'] === 'tts-1' && $row['voice'] === 'nova' && $row['text'] === 'Saved announcement'
+        && $row['audio_file'] === '/var/lib/asterisk/sounds/custom/announcementtts_1.wav', 'Upgrade from 17.0.8 adds engine selection while retaining existing text, voice and WAV');
 } finally {
     $connection->exec('DROP TABLE IF EXISTS modules, announcementtts');
     foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($testRoot, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::CHILD_FIRST) as $file) {

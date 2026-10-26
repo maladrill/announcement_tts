@@ -49,12 +49,12 @@ function announcementtts_get_config($engine) {
 // Compatibility wrappers for the original procedural FreePBX module API.
 function announcementtts_add($description, $unused = '', $skip = 0, $post_dest = '', $ret = 0, $na = 0, $repeat = '') {
     return FreePBX::Announcementtts()->addAnnouncementtts($description, $post_dest,
-        $_REQUEST['text'] ?? '', $_REQUEST['language'] ?? 'pl', $_REQUEST['voice'] ?? 'fable');
+        $_REQUEST['text'] ?? '', $_REQUEST['language'] ?? 'pl', $_REQUEST['voice'] ?? null, $_REQUEST['backend'] ?? 'realtime');
 }
 function announcementtts_edit($id, $unused = '', $skip = 0, $post_dest = '', $ret = 0, $na = 0, $repeat = '') {
     $row = announcementtts_get($id);
     return FreePBX::Announcementtts()->editAnnouncementtts($id, $_REQUEST['description'] ?? $row['description'] ?? '', $post_dest,
-        $_REQUEST['text'] ?? '', $_REQUEST['language'] ?? 'pl', $_REQUEST['voice'] ?? 'fable');
+        $_REQUEST['text'] ?? '', $_REQUEST['language'] ?? 'pl', $_REQUEST['voice'] ?? null, false, $_REQUEST['backend'] ?? null);
 }
 function announcementtts_delete($id) { return FreePBX::Announcementtts()->deleteAnnouncementtts($id); }
 function generate_tts($id, $text, $language, $voice) {

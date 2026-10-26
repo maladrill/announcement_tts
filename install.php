@@ -4,7 +4,7 @@ if (!defined('FREEPBX_IS_AUTH')) { die('No direct script access allowed'); }
 // FreePBX includes this script in a scope containing its legacy global database wrapper.
 // Keep installer variables local so PDO cannot replace that wrapper.
 (static function (): void {
-    foreach (['curl', 'mbstring', 'pdo_mysql'] as $extension) {
+    foreach (['curl', 'mbstring', 'pdo_mysql', 'openssl'] as $extension) {
         if (!extension_loaded($extension)) { throw new RuntimeException('Required PHP extension is missing: ' . $extension); }
     }
     if (!is_executable('/usr/bin/ffmpeg')) { throw new RuntimeException('Install FFmpeg before installing Announcements TTS.'); }
@@ -14,6 +14,7 @@ if (!defined('FREEPBX_IS_AUTH')) { die('No direct script access allowed'); }
         announcementtts_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
         description VARCHAR(50) NULL, `text` TEXT NULL,
         language VARCHAR(10) NOT NULL DEFAULT 'pl', voice VARCHAR(20) NOT NULL DEFAULT 'fable',
+        backend VARCHAR(20) NOT NULL DEFAULT 'tts-1',
         audio_file VARCHAR(255) NULL, post_dest VARCHAR(255) NOT NULL DEFAULT ''
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     $engine = $database->query("SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'announcementtts'")->fetchColumn();
@@ -23,6 +24,7 @@ if (!defined('FREEPBX_IS_AUTH')) { die('No direct script access allowed'); }
     foreach ([
         'text' => 'TEXT NULL', 'language' => "VARCHAR(10) NOT NULL DEFAULT 'pl'",
         'voice' => "VARCHAR(20) NOT NULL DEFAULT 'fable'", 'audio_file' => 'VARCHAR(255) NULL',
+        'backend' => "VARCHAR(20) NOT NULL DEFAULT 'tts-1'",
         'post_dest' => "VARCHAR(255) NOT NULL DEFAULT ''",
     ] as $name => $definition) {
         if (!in_array($name, $columns, true)) { $database->exec('ALTER TABLE announcementtts ADD COLUMN `' . $name . '` ' . $definition); }
