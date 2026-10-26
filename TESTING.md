@@ -106,3 +106,9 @@ CI also runs `php tests/install.php` against an isolated MariaDB schema on PHP 8
 Include FreePBX, PHP, Asterisk and FFmpeg versions, the branch commit and results for each scenario. For failures, include the timestamp, record ID and a redacted log excerpt. Never send API keys, tokens, confidential announcement contents or customer information.
 
 To revert the tests, restore the preinstallation snapshot. Keep the PR unmerged until PBX integration tests have passed.
+
+## CI infrastructure time limits
+
+Each PHP matrix job has a 15-minute deadline. Dependency provisioning has a 6-minute step limit, with 120 seconds for APT index refresh and 180 seconds for package installation (plus a 10-second termination grace period each). HTTP/HTTPS acquire operations time out after 15 seconds and retry at most twice. Any failed index refresh fails the job instead of silently using stale indexes. The GitHub runner mirror list uses the official Ubuntu HTTPS archives, preserving the existing source definitions and signature verification. No settings on the PBX are changed.
+
+New runs cancel superseded runs of the same workflow, event and ref. Push and pull-request validation retain separate concurrency groups. These limits and cancellation groups apply only to runs started with this workflow version; already running older workflows must be cancelled separately in GitHub Actions.
