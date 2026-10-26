@@ -30,7 +30,7 @@ $(document).on('click-row.bs.table', '#announcegrid-side', function(e,row,elem){
 function announcementttsEscapeHtml(value) {
   var element = document.createElement('span');
   element.textContent = String(value);
-  return element.innerHTML;
+  return element.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function actionformatter(v,r){

@@ -16,7 +16,7 @@ const document = {
     return {
       textContent: '',
       get innerHTML() {
-        return this.textContent.replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
+        return this.textContent.replace(/[&<>]/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;'}[char]));
       }
     };
   },
@@ -49,6 +49,7 @@ for (const id of [0, -1, '', null, undefined, '1" onclick="test', '1 OR 1=1']) {
 unsafeTranslation = true;
 const translated = context.actionformatter(1, {});
 check(!translated.includes('<img') && translated.includes('&lt;img'), 'Translated action labels are HTML-escaped');
+check(!translated.includes('onerror="test"') && translated.includes('onerror=&quot;test&quot;'), 'Translated labels also escape quotes in title and aria-label attributes');
 unsafeTranslation = false;
 const click = handlers.find(item => item.event === 'click' && item.selector === '#table-all .announcementtts-delete');
 check(Boolean(click), 'Delete handler is delegated to asynchronously loaded grid rows');
