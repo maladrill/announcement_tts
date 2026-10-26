@@ -2,7 +2,7 @@
   <rawname>announcementtts</rawname>
   <repo>unsupported</repo>
   <name>Announcements TTS</name>
-  <version>17.0.7</version>
+  <version>17.0.8</version>
   <publisher>SQS Polska</publisher>
   <license>GPLv3+</license>
   <licenselink>http://www.gnu.org/licenses/gpl-3.0.txt</licenselink>
@@ -12,6 +12,7 @@
     Isolate installer variables to preserve FreePBX database escaping during module registration.
     Handle FreePBX's false extdisplay sentinel when opening a new announcement form.
     Restore list deletion with confirmation and a session-token-protected POST request.
+    Match standard FreePBX icon-only list actions with accessible labels and keyboard focus.
   </changelog>
   <category>Applications</category>
   <more-info>https://github.com/maladrill/announcement_tts</more-info>

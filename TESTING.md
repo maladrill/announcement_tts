@@ -1,4 +1,4 @@
-# Integration tests for 17.0.7
+# Integration tests for 17.0.8
 
 ## Preparation
 
@@ -6,7 +6,7 @@ Use an isolated FreePBX 17 PBX on Debian 12/PHP 8.2. Take a VM/CT snapshot befor
 
 1. Install prerequisites and prepare the protected key file as described in README.md.
 2. Install the `fix/freepbx17-tts-reliability` branch through Module Admin. Archive: `https://github.com/maladrill/announcement_tts/archive/refs/heads/fix/freepbx17-tts-reliability.zip`.
-3. Run `fwconsole chown`, then `fwconsole reload`. Confirm version 17.0.7 in Module Admin.
+3. Run `fwconsole chown`, then `fwconsole reload`. Confirm version 17.0.8 in Module Admin.
 4. Prepare a test extension and an inbound route to the announcement. Restrict PBX administration to the management network.
 
 ## Scenarios
@@ -32,7 +32,7 @@ Use an isolated FreePBX 17 PBX on Debian 12/PHP 8.2. Take a VM/CT snapshot befor
 | Two simultaneous saves | The second request reports busy; text and audio do not become mixed. |
 | Description over 50 characters, text over 4096, nonexistent destination | Rejected server-side even when browser validation is bypassed. |
 | Delete using the form | Row disappears and Apply Config is required; GET and tokenless POST do not delete it. |
-| Delete directly from the list | Every row shows Edit and Delete; Cancel leaves the record unchanged, confirmation submits a token-protected POST for that row and returns to the list. |
+| Delete directly from the list | Every row shows only the pencil and trash icons, with tooltips/accessibility labels and no visible Delete text or button frame; Cancel leaves the record unchanged, confirmation submits a token-protected POST for that row and returns to the list. |
 | Audio preview without module permission | Access denied; no WAV content returned. |
 | Change a destination globally in FreePBX | `post_dest` reference is updated correctly. |
 | Description containing `${LEN(test)}` | Dialplan contains only `AnnouncementTTS ID <number>`, never the user description. |

@@ -4,6 +4,7 @@
 //
 //
 ?>
+<link rel="stylesheet" href="modules/announcementtts/assets/css/announcementtts.css?v=<?php echo substr(hash_file('sha256', __DIR__ . '/../assets/css/announcementtts.css'), 0, 12) ?>">
 <script src="modules/announcementtts/assets/js/announcementtts.js?v=<?php echo substr(hash_file('sha256', __DIR__ . '/../assets/js/announcementtts.js'), 0, 12) ?>"></script>
 <script>
 	var destinations = <?php echo json_encode(FreePBX::Modules()->getDestinations(), JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)?>;

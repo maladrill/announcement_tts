@@ -36,7 +36,7 @@ Upload the archive through **Admin → Module Admin → Upload Modules**, then i
 4. Save, then select **Apply Config** after successful generation.
 5. The edit form provides a WAV preview and an explicit regeneration option.
 
-Each list row includes Edit and Delete actions. Delete asks for confirmation and submits a POST request protected by the current session token. The edit form also provides a Delete button. Apply Config after deleting an announcement.
+Each list row includes icon-only Edit and Delete actions matching the standard Announcements module. Tooltips and accessible labels identify both actions. Delete asks for confirmation and submits a POST request protected by the current session token. The edit form also provides a Delete button. Apply Config after deleting an announcement.
 
 **Empty or whitespace-only text intentionally disables playback.** It is stored as empty text with no audio file reference. Saving it makes no API call and creates no placeholder WAV, even when regeneration is selected. After Apply Config, the announcement routes directly to its destination without `Playback()`, `Answer()` or `Wait()`, preserving the channel's answer state. Clearing previously populated text disables the old recording after the configuration is applied. Entering text again generates new audio.
 

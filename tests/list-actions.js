@@ -40,7 +40,8 @@ function check(ok, message) {
 for (const id of [1, '42']) {
   const html = context.actionformatter(id, {});
   check(html.includes('fa-edit') && html.includes('announcementtts-delete') && html.includes('fa-trash')
-    && html.includes('data-id="' + id + '"') && html.includes('> Delete</button>'), 'List row exposes both edit and delete for ID ' + id);
+    && html.includes('data-id="' + id + '"') && html.includes('title="Delete" aria-label="Delete"'), 'List row exposes both accessible icon actions for ID ' + id);
+  check(html.replace(/<[^>]*>/g, '').trim() === '' && !html.includes('btn btn-link'), 'List actions contain only icons without a text-button appearance');
   check(html.includes('type="button"') && !html.includes('action=delete'), 'List deletion does not navigate to a mutating GET URL');
 }
 for (const id of [0, -1, '', null, undefined, '1" onclick="test', '1 OR 1=1']) {

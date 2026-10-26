@@ -57,6 +57,8 @@ try {
     check(str_contains($html, 'id="table-all"'), 'Module landing page renders its list with the FreePBX false sentinel');
     check(preg_match('/announcementtts\.js\?v=[a-f0-9]{12}/', $html) === 1,
         'List scripts use a content hash to refresh cached action handlers after updates');
+    check(preg_match('/announcementtts\.css\?v=[a-f0-9]{12}/', $html) === 1,
+        'List loads versioned styles for compact icon actions');
     check(preg_match('/<form\b[^>]*id="announcementtts-delete-form"[^>]*method="post"[^>]*action="config\.php\?display=announcementtts"/', $html) === 1,
         'List deletion uses a POST form targeting the module controller');
     check(preg_match('/<form\b[^>]*id="announcementtts-delete-form"[^>]*>(.*?)<\/form>/s', $html, $deleteForm) === 1

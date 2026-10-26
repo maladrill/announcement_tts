@@ -38,7 +38,7 @@ function actionformatter(v,r){
   var editLabel = announcementttsEscapeHtml(_('Edit'));
   var deleteLabel = announcementttsEscapeHtml(_('Delete'));
   return '<a href="?display=announcementtts&amp;view=form&amp;extdisplay='+v+'" title="'+editLabel+'" aria-label="'+editLabel+'"><i class="fa fa-edit" aria-hidden="true"></i></a> '
-    + '<button type="button" class="btn btn-link announcementtts-delete" data-id="'+v+'" title="'+deleteLabel+'" aria-label="'+deleteLabel+'"><i class="fa fa-trash" aria-hidden="true"></i> '+deleteLabel+'</button>';
+    + '<button type="button" class="announcementtts-delete" data-id="'+v+'" title="'+deleteLabel+'" aria-label="'+deleteLabel+'"><i class="fa fa-trash" aria-hidden="true"></i></button>';
 }
 
 // Grid rows are loaded asynchronously; use delegation and the token-protected POST form.
