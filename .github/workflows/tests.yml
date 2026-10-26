@@ -1,0 +1,68 @@
+name: Module checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+# Cancel obsolete runs without letting push and pull_request cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        php: ['8.2', '8.3']
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@bf6b4fbd49ca58e4608c9c89fba0b8d90bd2a39f # 2.35.5
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, pdo_sqlite, pdo_mysql, curl, simplexml
+          coverage: none
+      - name: Install audio converter and test database
+        timeout-minutes: 6
+        shell: bash
+        run: |
+          # Use the official HTTPS archives instead of the runner's unreliable Azure mirror.
+          # Keep the existing source definitions and package signature verification.
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            printf '%s\tpriority:%s\n' \
+              'https://archive.ubuntu.com/ubuntu/' 1 \
+              'https://security.ubuntu.com/ubuntu/' 2 \
+              | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          fi
+          apt_options=(
+            -o Acquire::Retries=2
+            -o Acquire::http::Timeout=15
+            -o Acquire::https::Timeout=15
+            -o Acquire::Languages=none
+          )
+          # The outer deadlines also bound DNS stalls, multiple mirrors and per-file retries.
+          sudo timeout --signal=TERM --kill-after=10s 120s \
+            apt-get "${apt_options[@]}" -o APT::Update::Error-Mode=any update
+          sudo timeout --signal=TERM --kill-after=10s 180s \
+            apt-get "${apt_options[@]}" install -y --no-install-recommends ffmpeg mariadb-server
+          sudo systemctl start mariadb
+          sudo mariadb --batch <<'SQL'
+          CREATE DATABASE announcementtts_install_test CHARACTER SET utf8mb4;
+          CREATE USER 'runner'@'localhost' IDENTIFIED VIA unix_socket;
+          GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP ON announcementtts_install_test.* TO 'runner'@'localhost';
+          SQL
+      - name: Check PHP and JavaScript syntax
+        run: |
+          find . -name '*.php' -print0 | xargs -0 -n1 php -l
+          node --check assets/js/announcementtts.js
+      - name: Run offline regression tests
+        run: |
+          php tests/run.php
+          node tests/list-actions.js
+      - name: Test installation and FreePBX registration against MariaDB
+        env:
+          ANNOUNCEMENTTTS_INSTALL_DSN: mysql:unix_socket=/run/mysqld/mysqld.sock;dbname=announcementtts_install_test;charset=utf8mb4
+          ANNOUNCEMENTTTS_INSTALL_DB_USER: runner
+        run: php tests/install.php

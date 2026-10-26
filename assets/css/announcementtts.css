@@ -1,0 +1,29 @@
+/* Match FreePBX's compact icon actions while retaining a native accessible button. */
+#table-all button.announcementtts-delete {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    height: auto;
+    line-height: inherit;
+    margin: 0;
+    min-height: 0;
+    min-width: 0;
+    padding: 0;
+    vertical-align: baseline;
+    width: auto;
+}
+
+#table-all button.announcementtts-delete:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+#table-all button.announcementtts-delete:disabled {
+    cursor: wait;
+    opacity: 0.5;
+}

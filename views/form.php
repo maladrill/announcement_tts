@@ -1,20 +1,41 @@
 <?php if (!defined('FREEPBX_IS_AUTH')) { die('No direct script access allowed'); } ?> 
 
 <!-- Load custom JS -->
-<script type="text/javascript" src="modules/announcementtts/assets/js/announcementtts.js"></script>
+<script type="text/javascript" src="modules/announcementtts/assets/js/announcementtts.js?v=<?php echo substr(hash_file('sha256', __DIR__ . '/../assets/js/announcementtts.js'), 0, 12) ?>"></script>
 
 <?php
 // Load record if editing
 $request    = $_REQUEST;
-$extdisplay = $request['extdisplay'] ?? '';
+try {
+    $recordId = \FreePBX\modules\Announcementtts\Service::optionalId($request['extdisplay'] ?? null);
+} catch (\InvalidArgumentException $e) {
+    echo '<div class="alert alert-danger">' . _('Invalid announcement ID.') . '</div>';
+    return;
+}
+$extdisplay = $recordId === null ? '' : (string) $recordId;
 $row = !empty($extdisplay) ? announcementtts_get($extdisplay) : [];
+if ($extdisplay !== '' && !$row) {
+    echo '<div class="alert alert-danger">' . _('Announcement does not exist.') . '</div>';
+    return;
+}
+// Preserve entered values after a validation/provider failure, without changing saved data.
+if (FreePBX::Announcementtts()->formError() !== null) {
+    foreach (['description', 'text', 'language', 'voice', 'backend', 'post_dest'] as $field) {
+        if (isset($_POST[$field]) && is_string($_POST[$field])) { $row[$field] = $_POST[$field]; }
+    }
+    if (isset($_POST['goto0']) && is_string($_POST['goto0']) && isset($_POST[$_POST['goto0'] . '0']) && is_string($_POST[$_POST['goto0'] . '0'])) {
+        $row['post_dest'] = $_POST[$_POST['goto0'] . '0'];
+    }
+}
 
 // Defaults
 $action      = $extdisplay ? 'edit' : 'add';
 $description = $row['description'] ?? '';
 $text        = $row['text']        ?? '';
 $language    = $row['language']    ?? 'pl';
-$voice       = $row['voice']       ?? 'fable';
+$backend     = $row['backend']     ?? ($recordId === null ? 'realtime' : 'tts-1');
+if (!isset(\FreePBX\modules\Announcementtts\TtsGenerator::ENGINES[$backend])) { $backend = 'realtime'; }
+$voice       = $row['voice'] ?? \FreePBX\modules\Announcementtts\TtsGenerator::defaultVoice($backend);
 $post_dest   = $row['post_dest']   ?? '';
 
 // Language and voice options
@@ -27,15 +48,23 @@ $LANGUAGES = [
   'sk'=>'Slovak','sl'=>'Slovenian','es'=>'Spanish','sw'=>'Swahili','sv'=>'Swedish','tl'=>'Tagalog','ta'=>'Tamil','th'=>'Thai','tr'=>'Turkish',
   'uk'=>'Ukrainian','ur'=>'Urdu','vi'=>'Vietnamese','cy'=>'Welsh',
 ];
-$VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','shimmer'];
+$VOICES = \FreePBX\modules\Announcementtts\TtsGenerator::voices($backend);
+$voiceConfiguration = [];
+foreach (array_keys(\FreePBX\modules\Announcementtts\TtsGenerator::ENGINES) as $engine) {
+    $voiceConfiguration[$engine] = [
+        'voices' => \FreePBX\modules\Announcementtts\TtsGenerator::voices($engine),
+        'defaultVoice' => \FreePBX\modules\Announcementtts\TtsGenerator::defaultVoice($engine),
+    ];
+}
 ?>
 
 <form class="fpbx-submit"
       name="editAnnouncementtts"
-      action="?display=announcementtts"
+      action="config.php?display=announcementtts&amp;view=form"
       method="post"
-      onsubmit="return checkAnnouncementtts(this);"
-      data-fpbx-delete="config.php?display=announcementtts&amp;extdisplay=<?php echo $extdisplay ?>&amp;action=delete">
+      onsubmit="return checkAnnouncementtts(this);">
+
+  <input type="hidden" name="announcementtts_csrf" value="<?php echo htmlspecialchars(FreePBX::Announcementtts()->csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
 
   <input type="hidden" name="extdisplay"         value="<?php echo htmlspecialchars($extdisplay) ?>">
   <input type="hidden" name="announcementtts_id" value="<?php echo htmlspecialchars($extdisplay) ?>">
@@ -51,7 +80,7 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
         <i class="fa fa-question-circle fpbx-help-icon" data-for="description"></i>
       </div>
       <div class="col-md-9">
-        <input type="text" id="description" name="description" class="form-control"
+        <input type="text" id="description" name="description" class="form-control" maxlength="50" required
                value="<?php echo htmlspecialchars($description) ?>" />
         <span id="description-help" class="help-block fpbx-help-block">
           <?php echo _("The name of this announcement.") ?>
@@ -68,10 +97,25 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
         <i class="fa fa-question-circle fpbx-help-icon" data-for="text"></i>
       </div>
       <div class="col-md-9">
-        <textarea id="text" name="text" class="form-control" rows="4"><?php echo htmlspecialchars($text) ?></textarea>
+        <textarea id="text" name="text" class="form-control" rows="4" maxlength="4096"><?php echo htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></textarea>
         <span id="text-help" class="help-block fpbx-help-block">
-          <?php echo _("Enter the text to be converted to speech.") ?>
+          <?php echo _("Enter text to generate speech. Leave this field empty to skip playback and go directly to the selected destination.") ?>
         </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TTS Engine -->
+  <div class="element-container">
+    <div class="form-group row">
+      <div class="col-md-3"><label for="backend" class="control-label"><?php echo _("TTS Engine") ?></label></div>
+      <div class="col-md-9">
+        <select id="backend" name="backend" class="form-control">
+          <?php foreach (\FreePBX\modules\Announcementtts\TtsGenerator::ENGINES as $value => $label): ?>
+          <option value="<?php echo $value ?>"<?php echo $value === $backend ? ' selected' : '' ?>><?php echo $label ?></option>
+          <?php endforeach; ?>
+        </select>
+        <span class="help-block"><?php echo _("Changing the engine regenerates audio when saved. Available voices depend on the selected engine.") ?></span>
       </div>
     </div>
   </div>
@@ -93,7 +137,7 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
       <div class="col-md-9">
         <select id="language" name="language" class="form-control"><?php echo $langopts ?></select>
         <span id="language-help" class="help-block fpbx-help-block">
-          <?php echo _("Select the language used for text-to-speech conversion.") ?>
+          <?php echo _("Language metadata. Speech follows the language of the entered text; this setting does not translate it.") ?>
         </span>
       </div>
     </div>
@@ -114,7 +158,7 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
         <i class="fa fa-question-circle fpbx-help-icon" data-for="voice"></i>
       </div>
       <div class="col-md-9">
-        <select id="voice" name="voice" class="form-control"><?php echo $voiceopts ?></select>
+        <select id="voice" name="voice" class="form-control" data-initial-voice="<?php echo htmlspecialchars($voice, ENT_QUOTES, 'UTF-8') ?>"><?php echo $voiceopts ?></select>
         <span id="voice-help" class="help-block fpbx-help-block">
           <?php echo _("Choose the voice model for speech synthesis.") ?>
         </span>
@@ -123,16 +167,16 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
   </div>
 
   <!-- Audio File (if exists) -->
-  <?php if (!empty($row['audio_file']) && file_exists($row['audio_file'])):
+  <?php if (FreePBX::Announcementtts()->service()->audioPath($row['audio_file'] ?? '') !== null):
     $id = intval($row['announcementtts_id']);
-    $audio_url = htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES) . '?display=announcementtts&download_audio=' . $id;
+    $audio_url = 'ajax.php?module=announcementtts&amp;command=audio&amp;id=' . $id;
   ?>
   <div class="element-container">
     <div class="form-group row">
       <div class="col-md-3"><?php echo _("Audio File") ?></div>
       <div class="col-md-9">
         <strong><?php echo htmlspecialchars(basename($row['audio_file'])) ?></strong><br>
-        <audio controls src="<?php echo $audio_url ?>" type="audio/wav">
+        <audio controls preload="none" src="<?php echo $audio_url ?>">
           <?php echo _("Your browser does not support audio playback.") ?>
         </audio>
       </div>
@@ -155,7 +199,20 @@ $VOICES = ['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','s
       </div>
     </div>
   </div>
+  <?php if ($extdisplay !== ''): ?>
+  <div class="element-container">
+    <label><input type="checkbox" name="regenerate" value="1"> <?php echo _('Regenerate audio even if the text has not changed') ?></label>
+  </div>
+  <?php endif; ?>
 </form>
+<?php if ($extdisplay !== ''): ?>
+<form method="post" action="config.php?display=announcementtts" onsubmit="return confirm(<?php echo htmlspecialchars(json_encode(_('Delete this announcement?')), ENT_QUOTES, 'UTF-8') ?>);">
+  <input type="hidden" name="action" value="delete">
+  <input type="hidden" name="announcementtts_id" value="<?php echo htmlspecialchars($extdisplay, ENT_QUOTES, 'UTF-8') ?>">
+  <input type="hidden" name="announcementtts_csrf" value="<?php echo htmlspecialchars(FreePBX::Announcementtts()->csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
+  <button type="submit" class="btn btn-danger"><?php echo _('Delete') ?></button>
+</form>
+<?php endif; ?>
 
 <!-- JavaScript array of names for duplicate check -->
 <script>
@@ -166,6 +223,7 @@ if (!empty($extdisplay)) {
     $all = array_filter($all, fn($r) => $r['announcementtts_id'] != $extdisplay);
 }
 $existingDescriptions = array_column($all, 'description');
-echo 'var announcementttsnames = ' . json_encode($existingDescriptions, JSON_THROW_ON_ERROR) . ';';
+echo 'var announcementttsVoices = ' . json_encode($voiceConfiguration, JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ';';
+echo 'var announcementttsnames = ' . json_encode($existingDescriptions, JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ';';
 ?>
 </script>
