@@ -6,8 +6,13 @@
 <?php
 // Load record if editing
 $request    = $_REQUEST;
-$extdisplay = $request['extdisplay'] ?? '';
-$extdisplay = $extdisplay === '' ? '' : (string) \FreePBX\modules\Announcementtts\Service::id($extdisplay);
+try {
+    $recordId = \FreePBX\modules\Announcementtts\Service::optionalId($request['extdisplay'] ?? null);
+} catch (\InvalidArgumentException $e) {
+    echo '<div class="alert alert-danger">' . _('Invalid announcement ID.') . '</div>';
+    return;
+}
+$extdisplay = $recordId === null ? '' : (string) $recordId;
 $row = !empty($extdisplay) ? announcementtts_get($extdisplay) : [];
 if ($extdisplay !== '' && !$row) {
     echo '<div class="alert alert-danger">' . _('Announcement does not exist.') . '</div>';

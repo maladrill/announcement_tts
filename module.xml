@@ -2,7 +2,7 @@
   <rawname>announcementtts</rawname>
   <repo>unsupported</repo>
   <name>Announcements TTS</name>
-  <version>17.0.5</version>
+  <version>17.0.6</version>
   <publisher>SQS Polska</publisher>
   <license>GPLv3+</license>
   <licenselink>http://www.gnu.org/licenses/gpl-3.0.txt</licenselink>
@@ -10,6 +10,7 @@
     Fix transactional TTS saves, audio preview, backups, GraphQL and dialplan input handling.
     Empty text skips playback and routes directly to the selected destination.
     Isolate installer variables to preserve FreePBX database escaping during module registration.
+    Handle FreePBX's false extdisplay sentinel when opening a new announcement form.
   </changelog>
   <category>Applications</category>
   <more-info>https://github.com/maladrill/announcement_tts</more-info>

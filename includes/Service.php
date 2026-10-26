@@ -21,6 +21,11 @@ class Service {
         return (int) $id;
     }
 
+    public static function optionalId($id): ?int {
+        // FreePBX config.php represents a missing extdisplay as false in add forms.
+        return $id === null || $id === false || $id === '' ? null : self::id($id);
+    }
+
     public static function destination($value): string {
         if (!is_string($value) || strlen($value) > 255
             || !preg_match('/^[a-zA-Z0-9_!+.*#@:\/-]+,[a-zA-Z0-9_!+.*#@:\/-]+,[1-9][0-9]*$/D', $value)) {

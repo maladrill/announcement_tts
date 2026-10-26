@@ -1,4 +1,4 @@
-# Integration tests for 17.0.5
+# Integration tests for 17.0.6
 
 ## Preparation
 
@@ -6,13 +6,15 @@ Use an isolated FreePBX 17 PBX on Debian 12/PHP 8.2. Take a VM/CT snapshot befor
 
 1. Install prerequisites and prepare the protected key file as described in README.md.
 2. Install the `fix/freepbx17-tts-reliability` branch through Module Admin. Archive: `https://github.com/maladrill/announcement_tts/archive/refs/heads/fix/freepbx17-tts-reliability.zip`.
-3. Run `fwconsole chown`, then `fwconsole reload`. Confirm version 17.0.5 in Module Admin.
+3. Run `fwconsole chown`, then `fwconsole reload`. Confirm version 17.0.6 in Module Admin.
 4. Prepare a test extension and an inbound route to the announcement. Restrict PBX administration to the management network.
 
 ## Scenarios
 
 | Test | Expected result |
 | --- | --- |
+| Module landing page, then Add (`?display=announcementtts&view=form`) | The empty add form opens without an ID; FreePBX's `extdisplay=false` sentinel must not trigger an invalid-ID exception. |
+| Edit with a malformed or nonexistent ID | A handled error message; no uncaught exception and no database change. |
 | Fresh installation or retry after the 17.0.4 registration failure | Module Admin completes registration without SQLSTATE 42000 / 1064; existing announcement rows are preserved. |
 | New Polish announcement with `fable` | Save succeeds, preview plays valid WAV, and after Apply Config a call hears the full recording and reaches the selected extension. |
 | Change description/destination only | No additional TTS request; the new destination is used after Apply Config. |

@@ -5,8 +5,11 @@ $error = $module->formError();
 $view = $_REQUEST['view'] ?? '';
 if ($module->formSaved()) { $view = ''; }
 $usagehtml = '';
-if ($view === 'form' && !empty($_REQUEST['extdisplay'])) {
-    try { $usagehtml = FreePBX::View()->destinationUsage(announcementtts_getdest($_REQUEST['extdisplay'])); }
+if ($view === 'form') {
+    try {
+        $recordId = \FreePBX\modules\Announcementtts\Service::optionalId($_REQUEST['extdisplay'] ?? null);
+        if ($recordId !== null) { $usagehtml = FreePBX::View()->destinationUsage(announcementtts_getdest($recordId)); }
+    }
     catch (\InvalidArgumentException $e) { $error = $e->getMessage(); $view = ''; }
 }
 $content = load_view(__DIR__ . ($view === 'form' ? '/views/form.php' : '/views/grid.php'));

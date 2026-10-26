@@ -6,7 +6,10 @@ namespace {
     class FreePBX_Helpers { public function __construct($freepbx) {} }
     class FreePBX {
         public static $module;
+        public static $framework;
         public static function Announcementtts() { return self::$module; }
+        public static function Modules() { return self::$framework->Modules; }
+        public static function View() { return self::$framework->View; }
     }
     function needreload() { $GLOBALS['reloadCount'] = ($GLOBALS['reloadCount'] ?? 0) + 1; }
     class TestExtension {
@@ -96,6 +99,7 @@ namespace {
     $module = new \FreePBX\modules\Announcementtts($fpbx);
     (new ReflectionProperty($module, 'service'))->setValue($module, $service);
     $fpbx->Announcementtts = $module;
+    FreePBX::$framework = $fpbx;
     FreePBX::$module = $module;
     check(count($module->getALLAnnouncementstts()) === count($service->all()), 'BMO description list executes without an excluded ID');
     $settings = [];
@@ -177,4 +181,5 @@ namespace {
     check($service->get($id)['audio_file'] === null && count($restore->logs) === 1, 'FreePBX restore adapter supports old configuration-only backups with an explicit warning');
     $service->save($id, $data);
     require __DIR__ . '/silent.php';
+    require __DIR__ . '/views.php';
 }
