@@ -11,7 +11,7 @@ class RealtimeSpeech {
         $this->connect = $connect ?? [RealtimeWebSocket::class, 'connect'];
     }
 
-    public function request(string $key, string $text, string $voice, string $output): void {
+    public function request(#[\SensitiveParameter] string $key, string $text, string $voice, string $output): void {
         $socket = ($this->connect)($key);
         $file = null;
         try {

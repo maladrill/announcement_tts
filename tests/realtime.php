@@ -61,6 +61,17 @@ foreach ($cases as $name => $invalidEvents) {
     catch (RuntimeException $e) { check(!str_contains($e->getMessage(), 'secret-provider-body') && $mock->closed, 'Realtime rejects ' . $name . ', closes the connection and hides provider text'); }
 }
 
+$redactionClient = new RealtimeSpeech(static fn($key) => new RealtimeFixture([['type' => 'error']]));
+try { $redactionClient->request('key-redaction-test-marker', 'Test', 'marin', $realtimeOutput); }
+catch (RuntimeException $e) {
+    check(!str_contains($e->getTraceAsString(), 'key-redaction-test-marker'), 'Realtime errors redact credentials from PHP exception traces');
+}
+foreach ([[RealtimeSpeech::class, 'request', 'key'], [RealtimeWebSocket::class, 'connect', 'key'], [RealtimeWebSocket::class, 'write', 'data']] as [$class, $method, $parameter]) {
+    $parameters = (new ReflectionMethod($class, $method))->getParameters();
+    $sensitive = array_filter($parameters, static fn($p) => $p->getName() === $parameter && count($p->getAttributes(SensitiveParameter::class)) === 1);
+    check(count($sensitive) === 1, 'Credential-bearing parameters are marked sensitive: ' . $method);
+}
+
 class OfflineRealtimeGenerator extends TtsGenerator {
     public function __construct(private array $events) { parent::__construct(); }
     protected function requestRealtime(string $text, string $voice, string $output): void {

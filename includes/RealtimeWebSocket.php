@@ -12,7 +12,7 @@ class RealtimeWebSocket {
         $this->deadline = $deadline;
     }
 
-    public static function connect(string $key): self {
+    public static function connect(#[\SensitiveParameter] string $key): self {
         $context = stream_context_create(['ssl' => [
             'verify_peer' => true, 'verify_peer_name' => true,
             'peer_name' => 'api.openai.com', 'SNI_enabled' => true,
@@ -71,7 +71,7 @@ class RealtimeWebSocket {
         return $data;
     }
 
-    private function write(string $data): void {
+    private function write(#[\SensitiveParameter] string $data): void {
         $offset = 0;
         while ($offset < strlen($data)) {
             $this->timeout();
