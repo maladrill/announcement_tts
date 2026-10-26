@@ -55,6 +55,15 @@ try {
     check($fpbx->View->requests === [], 'Add page never looks up usage for an absent record ID');
     $html = $renderPage(['display' => 'announcementtts', 'extdisplay' => false]);
     check(str_contains($html, 'id="table-all"'), 'Module landing page renders its list with the FreePBX false sentinel');
+    check(preg_match('/announcementtts\.js\?v=[a-f0-9]{12}/', $html) === 1,
+        'List scripts use a content hash to refresh cached action handlers after updates');
+    check(preg_match('/<form\b[^>]*id="announcementtts-delete-form"[^>]*method="post"[^>]*action="config\.php\?display=announcementtts"/', $html) === 1,
+        'List deletion uses a POST form targeting the module controller');
+    check(preg_match('/<form\b[^>]*id="announcementtts-delete-form"[^>]*>(.*?)<\/form>/s', $html, $deleteForm) === 1
+        && str_contains($deleteForm[1], 'name="action" value="delete"')
+        && str_contains($deleteForm[1], 'name="announcementtts_csrf" value="' . $uiModule->csrfToken() . '"')
+        && str_contains($deleteForm[1], 'name="announcementtts_id" value=""'),
+        'List deletion includes a session token and a separate record ID field');
     foreach ([$id, (string) $id] as $existingId) {
         $html = $renderPage(array_replace($baseRequest, ['extdisplay' => $existingId]));
         check(preg_match('/name="action"\s+value="edit"/', $html) === 1 && str_contains($html, 'name="announcementtts_id" value="' . $id . '"'),

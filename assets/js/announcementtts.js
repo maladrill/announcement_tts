@@ -27,10 +27,34 @@ $(document).on('click-row.bs.table', '#announcegrid-side', function(e,row,elem){
 
 
 
+function announcementttsEscapeHtml(value) {
+  var element = document.createElement('span');
+  element.textContent = String(value);
+  return element.innerHTML;
+}
+
 function actionformatter(v,r){
   if (!/^[1-9][0-9]*$/.test(String(v))) { return ''; }
-  return '<a href="?display=announcementtts&amp;view=form&amp;extdisplay='+v+'"><i class="fa fa-edit"></i></a>';
+  var editLabel = announcementttsEscapeHtml(_('Edit'));
+  var deleteLabel = announcementttsEscapeHtml(_('Delete'));
+  return '<a href="?display=announcementtts&amp;view=form&amp;extdisplay='+v+'" title="'+editLabel+'" aria-label="'+editLabel+'"><i class="fa fa-edit" aria-hidden="true"></i></a> '
+    + '<button type="button" class="btn btn-link announcementtts-delete" data-id="'+v+'" title="'+deleteLabel+'" aria-label="'+deleteLabel+'"><i class="fa fa-trash" aria-hidden="true"></i> '+deleteLabel+'</button>';
 }
+
+// Grid rows are loaded asynchronously; use delegation and the token-protected POST form.
+$(document).on('click', '#table-all .announcementtts-delete', function(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (this.disabled) { return; }
+  var form = document.getElementById('announcementtts-delete-form');
+  var id = this.getAttribute('data-id');
+  if (!form || !/^[1-9][0-9]*$/.test(String(id))) { return; }
+  if (!window.confirm(_('Delete this announcement?'))) { return; }
+  form.elements['announcementtts_id'].value = String(id);
+  this.disabled = true;
+  form.submit();
+});
+
 function aDestFormatter(value){
 	if(value === null || value.length == 0){
 		return _("No Destination");

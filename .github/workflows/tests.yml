@@ -34,7 +34,9 @@ jobs:
           find . -name '*.php' -print0 | xargs -0 -n1 php -l
           node --check assets/js/announcementtts.js
       - name: Run offline regression tests
-        run: php tests/run.php
+        run: |
+          php tests/run.php
+          node tests/list-actions.js
       - name: Test installation and FreePBX registration against MariaDB
         env:
           ANNOUNCEMENTTTS_INSTALL_DSN: mysql:unix_socket=/run/mysqld/mysqld.sock;dbname=announcementtts_install_test;charset=utf8mb4

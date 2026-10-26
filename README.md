@@ -36,6 +36,8 @@ Upload the archive through **Admin → Module Admin → Upload Modules**, then i
 4. Save, then select **Apply Config** after successful generation.
 5. The edit form provides a WAV preview and an explicit regeneration option.
 
+Each list row includes Edit and Delete actions. Delete asks for confirmation and submits a POST request protected by the current session token. The edit form also provides a Delete button. Apply Config after deleting an announcement.
+
 **Empty or whitespace-only text intentionally disables playback.** It is stored as empty text with no audio file reference. Saving it makes no API call and creates no placeholder WAV, even when regeneration is selected. After Apply Config, the announcement routes directly to its destination without `Playback()`, `Answer()` or `Wait()`, preserving the channel's answer state. Clearing previously populated text disables the old recording after the configuration is applied. Entering text again generates new audio.
 
 The language field is metadata. Speech follows the language of the entered text; this setting does not translate text or force the language through an API parameter.
@@ -75,6 +77,7 @@ The `text` field must be supplied, but an empty string is valid and disables pla
 
 ```bash
 php tests/run.php
+node tests/list-actions.js
 ```
 
 Tests require `pdo_sqlite`, `mbstring` and FFmpeg. They use a temporary SQLite database and FreePBX/API doubles; no API key or OpenAI requests are needed. CI runs the checks on PHP 8.2 and 8.3.

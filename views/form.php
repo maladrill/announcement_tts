@@ -1,7 +1,7 @@
 <?php if (!defined('FREEPBX_IS_AUTH')) { die('No direct script access allowed'); } ?> 
 
 <!-- Load custom JS -->
-<script type="text/javascript" src="modules/announcementtts/assets/js/announcementtts.js"></script>
+<script type="text/javascript" src="modules/announcementtts/assets/js/announcementtts.js?v=<?php echo substr(hash_file('sha256', __DIR__ . '/../assets/js/announcementtts.js'), 0, 12) ?>"></script>
 
 <?php
 // Load record if editing
