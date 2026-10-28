@@ -24,7 +24,35 @@ chown root:asterisk /etc/asterisk/openai.key
 chmod 0640 /etc/asterisk/openai.key
 ```
 
-Enter the API key into `/etc/asterisk/openai.key` using an editor running as root. The file must contain only the key. Keep credentials out of shell command lines, repositories and issue reports. The module does not include the key in backups. Limit the API account to the required service and configure an appropriate spending limit.
+## OpenAI API key
+
+Enter the API key into `/etc/asterisk/openai.key` using an editor running as root. The file must contain only the key.
+
+**Required ownership: `root:asterisk`. Required permissions: `0640` (`-rw-r-----`).** The owner `root` can read and write the file, the `asterisk` group can read it, and other users have no access. The PHP/web service account must be able to read the file; on a standard FreePBX installation this account is `asterisk`.
+
+After saving the key, run as root:
+
+```bash
+chown root:asterisk /etc/asterisk/openai.key
+chmod 0640 /etc/asterisk/openai.key
+
+# Show ownership and permissions without displaying the key.
+stat -c '%A (%a) %U:%G %n' /etc/asterisk/openai.key
+
+# Verify readability as the FreePBX service account without reading or displaying the key.
+runuser -u asterisk -- php -r '
+clearstatcache(true, "/etc/asterisk/openai.key");
+$readable = is_readable("/etc/asterisk/openai.key");
+echo $readable ? "OK: key file is readable\n" : "ERROR: key file is not readable\n";
+exit($readable ? 0 : 1);
+'
+```
+
+Expected file metadata: `-rw-r----- (640) root:asterisk /etc/asterisk/openai.key`. If the readability check fails, check the actual PHP service account and directory traversal permissions. Mode `0640` with ownership `root:root` does not allow the standard `asterisk` account to read the key. Do not grant access to other users with modes such as `0644` or `0777`.
+
+Keep credentials out of shell command lines, repositories and issue reports. The module does not include the key in backups. Limit the API account to the required service and configure an appropriate spending limit.
+
+## Module installation
 
 Upload the archive through **Admin → Module Admin → Upload Modules**, then install or upgrade `announcementtts`. Run the standard `fwconsole chown` if directories were created by root.
 
